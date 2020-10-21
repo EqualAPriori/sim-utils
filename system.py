@@ -77,7 +77,7 @@ def bondgraph_simple(bond_sequence):
 
 
 ### Create the system(s)
-def create_system(sys_params, topology, interactions, special_options=None):
+def create_system(sys_params, topology, interactions, special_options=None, load=True):
     print('=== Creating System ===')
     print('... Initializing Topology ...')
     sim_atom_types = {} #Sys.World.AtomTypes should be same thing, except only keeping atom types that make it into the world, and in list form
@@ -128,17 +128,21 @@ def create_system(sys_params, topology, interactions, special_options=None):
     Sys.ForceField.extend(force_field)
     print('Force Field Summary: {}'.format(Sys.ForceField))
 
-    # set up initial parameters
-    if sys_params['forcefield_file']: 
-        #with open(sys_params['forcefield_file'], 'r') as of: s = of.read()
-        #Sys.ForceField.SetParamString(s)      
-        ff.set_param_from_file(Sys.ForceField, sys_params['forcefield_file'])
+    if load:
+        load_system(Sys,ff_file=sys_params['forcefield_file'])
+    """
+        # set up initial parameters
+        if sys_params['forcefield_file']: 
+            #with open(sys_params['forcefield_file'], 'r') as of: s = of.read()
+            #Sys.ForceField.SetParamString(s)      
+            ff.set_param_from_file(Sys.ForceField, sys_params['forcefield_file'])
 
-    # set up histograms
-    for P in Sys.ForceField:
-        P.Arg.SetupHist(NBin = 10000, ReportNBin = 100)
-    # lock and load
-    Sys.Load()
+        # set up histograms
+        for P in Sys.ForceField:
+            P.Arg.SetupHist(NBin = 10000, ReportNBin = 100)
+        # lock and load
+        Sys.Load()
+    """
    
     # 4) Other options
     print('... Setting other options, e.g. temperature and integration ...')
@@ -158,4 +162,21 @@ def create_system(sys_params, topology, interactions, special_options=None):
         Int.Method.Barostat = Int.Method.BarostatMonteCarlo  
 
     return Sys
+
+def load_system(_Sys, ff_file=None):
+    # set up initial parameters
+    if ff_file is not None: 
+        #with open(sys_params['forcefield_file'], 'r') as of: s = of.read()
+        #Sys.ForceField.SetParamString(s)      
+        ff.set_param_from_file(_Sys.ForceField, ff_file)
+   
+    print('--- Force Field Summary: {} ---'.format(_Sys.ForceField))
+    print('{}'.format(_Sys.ForceField.ParamString()))
+
+    # set up histograms
+    for P in _Sys.ForceField:
+        P.Arg.SetupHist(NBin = 10000, ReportNBin = 100)
+    # lock and load
+    _Sys.Load()
+
 
