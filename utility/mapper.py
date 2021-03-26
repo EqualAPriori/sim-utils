@@ -117,6 +117,7 @@ def generate_single_mapping_shorthand(mode,shorthand):
         cg_site_of_aa = []
         for cgindex,entry in enumerate(shorthand):
             if (isinstance(entry,list) or isinstance(entry,tuple)):
+                print(entry)
                 assert len(entry) == 2, "mapping entry for simple shorthand should be an integer or a 2-element tuple"
                 cg_bead_name,num_in_cgbead = entry
             elif isinstance(entry,int):
@@ -258,7 +259,7 @@ def generate_single_mapping(mode,extra=None):
 
 def generate_system_mapping(mappings):
     ''' 
-    Generate the AA->CG mapping for an entire system, from single-chain mappings
+    Generate the AA->CG mapping for an entire system, from single-chain mappings. New atom indices are global atom indices instead of intrachain indices.
 
     Parameters
     ----------
@@ -284,15 +285,16 @@ def generate_system_mapping(mappings):
 
         molecule_mapping = mapping[0]
         n_replicates = mapping[1] #of replicates
-        n_beads_in_mapping = np.sum([ len(cgbead_mapping) for cgbead_mapping in molecule_mapping ])
+        n_beads_in_mapping = np.sum([ len(cgbead_mapping[1]) for cgbead_mapping in molecule_mapping ]) #i.e. # beads in chain/molecule
 
         cg_bead_names = [cgbead_mapping[0] for cgbead_mapping in molecule_mapping]
         for ii in range(n_replicates):
-            new_indices = [ list( np.array(cgbead_mapping[1]) + n_atoms_total ) for cgbead_mapping in molecule_mapping ]
+            new_indices = [ ( np.array(cgbead_mapping[1]) + n_atoms_total ).tolist() for cgbead_mapping in molecule_mapping ]
 
             aa_indices_in_cg.append( list(zip(cg_bead_names,new_indices)) )  #this way, can later iterate through by molecule/chain!
             n_atoms_total += n_beads_in_mapping
 
+    system_aa_indices_in_cg = aa_indices_in_cg
     return system_aa_indices_in_cg
 
 
@@ -377,6 +379,106 @@ def process_mappingfile(filename,mode,customfield=None):
        
     return aa_indices_in_cg, cg_site_of_aa, shorthand
 
+def process_mapping_system(filename):
+    """
+    Create a system_aa_indices_in_cg mapping with *global* atom indices, as well as a new cg-system topology.
+    """
+    with open(filename,'r') as stream:
+        params = yaml.load(stream)
+    system_spec = params['system']
+
+    mappings = []
+    tops = []
+    for entry in system_spec:
+        mappingfile = entry[0]
+        n_replicates = entry[1]
+        if len(entry) == 3:
+            custom = entry[2]
+        else:
+            custom = None
+
+        if mappingfile.endswith('pdb') and custom is None:
+            print('Recognizing .pdb mapping specification for {}'.format(mappingfile))
+            aa_indices_in_cg, cg_site_of_aa = process_pdbfile( mappingfile )
+            traj_mapped = map_single( mdtraj.load(mappingfile),aa_indices_in_cg )
+        elif mappingfile.endswith('pdb') and isinstance(custom,list):
+            print('Assuming the pdb is the unmapped pdb, and the customlist is a shortesthand notation')
+            aa_indices_in_cg,_ = generate_single_mapping_shorthand( mode='shortest',shorthand=custom )
+            traj_mapped = map_single( mdtraj.load(mappingfile),aa_indices_in_cg )
+        elif mappingfile.endswith('yaml'):
+            with open(mappingfile,'r') as stream:
+                chain_mapping_spec = yaml.load(stream)
+
+            if custom is None:
+                print('Recognizing .yaml mapping specification for {}, using the aa_indices_in_cg section'.format(mappingfile))
+                aa_indices_in_cg = chain_mapping_spec['aa_indices_in_cg'] 
+                traj_mapped = mdtraj.load(chain_mapping_spec['pdbfile_mapped'])
+            else:
+                #(e.g. if using shorthand)
+                print('Recognizing .yaml mapping specification for {}, using the {} section'.format(mappingfile,custom))
+                aa_indices_in_cg,_,_ = process_mappingfile(mappingfile,mode=custom,customfield=custom)
+                traj_mapped = map_single( mdtraj.load(chain_mapping_spec['pdbfile_unmapped']),aa_indices_in_cg )
+        else:
+            raise ValueError('chain/molecule mapping format not recognized')
+            
+        mappings.append( (aa_indices_in_cg, n_replicates) )
+        tops.append( (traj_mapped.top, n_replicates) )
+
+    system_aa_indices_in_cg = generate_system_mapping(mappings)
+    
+    #create new topology
+    sub_topologies = [None]*len(tops)
+
+    new_topology = mdtraj.Topology()
+    for ic,chain in enumerate(tops):
+        sub_topologies[ic] = replicate_topology( chain[0],chain[1] )
+        new_topology = new_topology.join(sub_topologies[ic])
+
+    #do the mapping
+    return system_aa_indices_in_cg, new_topology
+
+
+def replicate_topology(top,n_replicates):
+    '''
+    Try to be more efficient than sequentially adding (which I believe can cost a lot of iterations)
+    '''
+    bits = np.binary_repr(n_replicates)
+    power2_replicates = [top]
+    for ia in range( len(bits)-1 ):
+        power2_replicates.append( power2_replicates[-1].join(power2_replicates[-1]) )
+
+    new_top = mdtraj.Topology()
+    for ib,bit in enumerate(bits):
+        if int(bit) == 1:
+            new_top = new_top.join(power2_replicates[-(ib+1)])
+
+    return new_top
+
+def map_multiple(traj,cgtop,system_mapping):
+    '''
+    main difference from map_single is that these mappings are now organized by chain
+    Notes:
+    ------
+    Technically... didn't need to generate the system_cg_mapping to use global atom indices, since can reindex the atoms in a chain s.t. can use the intrachain indexing again! But this way keeps things fairly simple.
+
+    In the future, can either put in multiprocessing into this function, or wrap it
+    '''
+
+    num_cg = np.array([ len( entry ) for entry in system_mapping ]).sum()
+    xyz = np.zeros( [traj.n_frames,cgtop.n_atoms,3] )
+    num_cg_so_far = 0
+    for chain in system_mapping:
+        for cgbead_entry in chain:
+            aa_indices = cgbead_entry[1]
+            masses = np.array([traj.top.atom(ia).element.mass for ia in aa_indices])
+
+            com = np.sum(traj.xyz[:,aa_indices,:] * masses[None,:,None],1) / masses.sum()
+            xyz[:,num_cg_so_far,:] = com
+            num_cg_so_far += 1
+
+    new_traj = mdtraj.Trajectory(xyz,cgtop)
+    return new_traj
+
 def map_single(traj,mapping):
     '''
     take in a mapping array, and generate a new mapped topology for the chain, retaining bonds!
@@ -425,77 +527,99 @@ def map_single(traj,mapping):
     return cg_traj
 
 
-
-
 # ===== Tests =====
-#t = mdtraj.load('SDS.pdb')
-#try to figure out the mapping
-#rando = [(a.residue.name,a.residue.index) for a in t.top.atoms]
-#print('start test')
-#print(rando)
-#chain_mapping,cg_indices = generate_single_mapping(t.topology,mode='full',extra=rando)
-
-#t = mdtraj.load('pS20.pdb')
-#rando = np.random.randint(0,5,160)
-#generate_system_mapping( [(chain_mapping,5)] )
-#chain_mapping2,cg_indices2 = generate_single_mapping(t.topology,mode='simple',extra=[8]*t.n_residues)
-
-
-# Experiment 2: map from an annotated pdb file
-'''
-filename = 'SDS_ordered_2gro.pdb'
-t = mdtraj.load(filename)
+## Testing System
+systemfile = 'system_map.yaml'
+filename = 'pS20-2-SDS-3.pdb'
 prefix = os.path.splitext(filename)[0]
-aa_indices_in_cg, cg_site_of_aa = process_pdbfile('SDS.pdb')
-traj_mapped = map_single(t,aa_indices_in_cg)
-traj_mapping = generate_pdb_mapping(t, cg_site_of_aa)
-save(prefix, aa_indices_in_cg, cg_site_of_aa, traj_mapped = traj_mapped, traj_mapping = traj_mapping )
-'''
-
-
-# Experiment 3: map from a given mapping array
-filename = 'SDS_ordered_2gro.pdb'
-filemap = 'SDS.yaml'
 t = mdtraj.load(filename)
+system_aa_indices_in_cg, new_topology = process_mapping_system(systemfile)
+new_traj = map_multiple(t, new_topology, system_aa_indices_in_cg)
+new_traj.save(prefix + '_mapped.pdb')
 
-## Test pdbfile
-print('--- test0 ---')
-prefix,mode = 't0','pdb'
-aa_indices_in_cg, cg_site_of_aa, _ = process_mappingfile(filemap,mode)
-traj_mapped = map_single(t,aa_indices_in_cg)
-traj_mapping = generate_pdb_mapping(t, cg_site_of_aa)
-save(prefix, aa_indices_in_cg, cg_site_of_aa, traj_mapped = traj_mapped, traj_mapping = traj_mapping )
-
-## Test aa_indices_in_cg
-print('--- test1 ---')
-prefix,mode = 't1','aa'
-aa_indices_in_cg, cg_site_of_aa, _ = process_mappingfile(filemap,mode)
-traj_mapped = map_single(t,aa_indices_in_cg)
-traj_mapping = generate_pdb_mapping(t, cg_site_of_aa)
-save(prefix, aa_indices_in_cg, cg_site_of_aa, traj_mapped = traj_mapped, traj_mapping = traj_mapping )
-
-## Test cg_site_of_aa
-print('--- test2 ---')
-prefix,mode = 't2','cg'
-aa_indices_in_cg, cg_site_of_aa, _ = process_mappingfile(filemap,mode)
-traj_mapped = map_single(t,aa_indices_in_cg)
-traj_mapping = generate_pdb_mapping(t, cg_site_of_aa)
-save(prefix, aa_indices_in_cg, cg_site_of_aa, traj_mapped = traj_mapped, traj_mapping = traj_mapping )
-
-## Test shorthand
-print('--- test3 ---')
-prefix,mode = 't3','short'
+## Testing Single Chain
+test_singlechain = False
+'''
+print('--- maping pS ---')
+filename = 'pS20.pdb'
+filemap = 'pS20.yaml'
+t = mdtraj.load(filename)
+prefix,mode = 'pS20','shortest'
+prefix,mode = 'pS20','pdb'
 aa_indices_in_cg, cg_site_of_aa, shorthand = process_mappingfile(filemap,mode)
 traj_mapped = map_single(t,aa_indices_in_cg)
 traj_mapping = generate_pdb_mapping(t, cg_site_of_aa)
-save(prefix, aa_indices_in_cg, cg_site_of_aa, traj_mapped = traj_mapped, traj_mapping = traj_mapping, shorthand=shorthand )
-
-## Test shortesthand
-print('--- test4 ---')
-prefix,mode = 't4','shortest'
-#aa_indices_in_cg, cg_site_of_aa = process_mappingfile(filemap,mode)
-aa_indices_in_cg, cg_site_of_aa, shorthand = process_mappingfile(filemap,mode,customfield='shortesthand')
-traj_mapped = map_single(t,aa_indices_in_cg)
-traj_mapping = generate_pdb_mapping(t, cg_site_of_aa)
 save(prefix, aa_indices_in_cg, cg_site_of_aa, traj_mapped = traj_mapped, traj_mapping = traj_mapping, shorthand=shorthand)
+'''
+
+if test_singlechain:
+    #t = mdtraj.load('SDS.pdb')
+    #try to figure out the mapping
+    #rando = [(a.residue.name,a.residue.index) for a in t.top.atoms]
+    #print('start test')
+    #print(rando)
+    #chain_mapping,cg_indices = generate_single_mapping(t.topology,mode='full',extra=rando)
+
+    #t = mdtraj.load('pS20.pdb')
+    #rando = np.random.randint(0,5,160)
+    #generate_system_mapping( [(chain_mapping,5)] )
+    #chain_mapping2,cg_indices2 = generate_single_mapping(t.topology,mode='simple',extra=[8]*t.n_residues)
+
+
+    # Experiment 2: map from an annotated pdb file
+    '''
+    filename = 'SDS_ordered_2gro.pdb'
+    t = mdtraj.load(filename)
+    prefix = os.path.splitext(filename)[0]
+    aa_indices_in_cg, cg_site_of_aa = process_pdbfile('SDS.pdb')
+    traj_mapped = map_single(t,aa_indices_in_cg)
+    traj_mapping = generate_pdb_mapping(t, cg_site_of_aa)
+    save(prefix, aa_indices_in_cg, cg_site_of_aa, traj_mapped = traj_mapped, traj_mapping = traj_mapping )
+    '''
+
+    # Experiment 3: map from a given mapping array
+    filename = 'SDS_ordered_2gro.pdb'
+    filemap = 'SDS.yaml'
+    t = mdtraj.load(filename)
+
+    ## Test pdbfile
+    print('--- test0 ---')
+    prefix,mode = 't0','pdb'
+    aa_indices_in_cg, cg_site_of_aa, _ = process_mappingfile(filemap,mode)
+    traj_mapped = map_single(t,aa_indices_in_cg)
+    traj_mapping = generate_pdb_mapping(t, cg_site_of_aa)
+    save(prefix, aa_indices_in_cg, cg_site_of_aa, traj_mapped = traj_mapped, traj_mapping = traj_mapping )
+
+    ## Test aa_indices_in_cg
+    print('--- test1 ---')
+    prefix,mode = 't1','aa'
+    aa_indices_in_cg, cg_site_of_aa, _ = process_mappingfile(filemap,mode)
+    traj_mapped = map_single(t,aa_indices_in_cg)
+    traj_mapping = generate_pdb_mapping(t, cg_site_of_aa)
+    save(prefix, aa_indices_in_cg, cg_site_of_aa, traj_mapped = traj_mapped, traj_mapping = traj_mapping )
+
+    ## Test cg_site_of_aa
+    print('--- test2 ---')
+    prefix,mode = 't2','cg'
+    aa_indices_in_cg, cg_site_of_aa, _ = process_mappingfile(filemap,mode)
+    traj_mapped = map_single(t,aa_indices_in_cg)
+    traj_mapping = generate_pdb_mapping(t, cg_site_of_aa)
+    save(prefix, aa_indices_in_cg, cg_site_of_aa, traj_mapped = traj_mapped, traj_mapping = traj_mapping )
+
+    ## Test shorthand
+    print('--- test3 ---')
+    prefix,mode = 't3','short'
+    aa_indices_in_cg, cg_site_of_aa, shorthand = process_mappingfile(filemap,mode)
+    traj_mapped = map_single(t,aa_indices_in_cg)
+    traj_mapping = generate_pdb_mapping(t, cg_site_of_aa)
+    save(prefix, aa_indices_in_cg, cg_site_of_aa, traj_mapped = traj_mapped, traj_mapping = traj_mapping, shorthand=shorthand )
+
+    ## Test shortesthand
+    print('--- test4 ---')
+    prefix,mode = 't4','shortest'
+    #aa_indices_in_cg, cg_site_of_aa = process_mappingfile(filemap,mode)
+    aa_indices_in_cg, cg_site_of_aa, shorthand = process_mappingfile(filemap,mode,customfield='shortesthand')
+    traj_mapped = map_single(t,aa_indices_in_cg)
+    traj_mapping = generate_pdb_mapping(t, cg_site_of_aa)
+    save(prefix, aa_indices_in_cg, cg_site_of_aa, traj_mapped = traj_mapped, traj_mapping = traj_mapping, shorthand=shorthand)
 
