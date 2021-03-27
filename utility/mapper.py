@@ -6,6 +6,21 @@
 # 2) utilities for generating the index mappings
 # 3) utililities for actually doing the mapping of a configuration/trajectory
 #
+# Todo:
+# - add parallelization
+# - currently needs to keep full indexing list in memory... can be expensive, not the best for large systems
+#
+# Envisioned workflow:
+# 1) Map single chain:
+#       python mapper.py singlechain_pdb params -prefix desiredprefix -single
+#       and repeat for each individual system. should save out mapped pdb, mapping pdb, and yaml file for the chain
+# 2) Map system:
+#       python mapper.py system_dcd params -top top_for_pdb -prefix desiredprefix -system
+#       technically I've also allowed for a shorthand s.t. can skip the single chain intermediary above if desired
+#
+# instead of setting up a whole new system file... can also take multiple arguments from command line to build up the system! even easier?
+#
+
 import numpy as np
 import mdtraj
 import ruamel.yaml as YAML
@@ -27,7 +42,7 @@ def create_yaml():
     return yaml
 yaml = create_yaml()
 
-def save(prefix,aa_indices_in_cg,cg_site_of_aa,shorthand=None,traj_mapped=None, traj_mapping=None):
+def save(prefix,aa_indices_in_cg,cg_site_of_aa,shorthand=None,traj_mapped=None, traj_mapping=None, unmapped=None):
     mappingfile = prefix + '_mapping.yaml'
     if traj_mapped is not None:
         pdbfile = prefix + '_mapped.pdb'
@@ -39,15 +54,21 @@ def save(prefix,aa_indices_in_cg,cg_site_of_aa,shorthand=None,traj_mapped=None, 
     d = {
             'pdbfile_mapped': pdbfile,
             'pdbfile_mapping': pdbfile_mapping,
+            'pdbfile_unmapped': unmapped,
             'aa_indices_in_cg': aa_indices_in_cg,
             'cg_site_of_aa': cg_site_of_aa,
             'shorthand': shorthand
         }
 
-    with open(mappingfile,'w') as f:
-        f.write('# mapping specifications for molecule {}\n'.format(prefix))
-        yaml.dump(d,f)
+    save_dict( mappingfile, d, header = '# mapping specifications for molecule {}\n'.format(prefix) )
+    #with open(mappingfile,'w') as f:
+    #    f.write('# mapping specifications for molecule {}\n'.format(prefix))
+    #    yaml.dump(d,f)
 
+def save_dict( filename, mydict, header=None ):
+    with open( filename, 'w' ) as f:
+        f.write('# {}\n'.format(header))
+        yaml.dump( mydict, f )
 
 # ===== Mapping Utilities =====
 def generate_pdb_mapping(traj,mapping):
@@ -373,8 +394,7 @@ def process_mappingfile(filename,mode,customfield=None):
             my_mapping = mapping[mode]
         else:
             my_mapping = mapping[customfield]
-        aa_indices_in_cg, cg_site_of_aa = generate_single_mapping_shorthand( mode=mode,extra=my_mapping)
-        shorthand = None
+        aa_indices_in_cg, cg_site_of_aa, shorthand = generate_single_mapping( mode=mode,extra=my_mapping)
         #raise ValueError('specified mode has not been implemented yet')
        
     return aa_indices_in_cg, cg_site_of_aa, shorthand
@@ -382,10 +402,14 @@ def process_mappingfile(filename,mode,customfield=None):
 def process_mapping_system(filename):
     """
     Create a system_aa_indices_in_cg mapping with *global* atom indices, as well as a new cg-system topology.
+    Modified such that can take a filename, or a system_spec list of lists!
     """
-    with open(filename,'r') as stream:
-        params = yaml.load(stream)
-    system_spec = params['system']
+    if type(filename) is str:
+        with open(filename,'r') as stream:
+            params = yaml.load(stream)
+        system_spec = params['system']
+    else: #treat filename as system_spec list of lists
+        system_spec = filename
 
     mappings = []
     tops = []
@@ -526,9 +550,95 @@ def map_single(traj,mapping):
 
     return cg_traj
 
+# ===== Main =====
+if __name__ == "__main__":
+    ''' example calls
+    python mapper.py -traj pS20.pdb -prefix test -style single -params pS20_mapping.yaml -mode cg
+    python mapper.py -traj pS20.pdb -prefix test -style single -params pS20_mapping.yaml
+    python mapper.py -traj pS20.pdb -prefix test -style single -params pS20_mapping.pdb
+
+    python mapper.py -traj pS20-2-SDS-3.pdb -prefix test_system -style system -params system_map.yaml
+    python mapper.py -traj pS20-2-SDS-3.pdb -prefix test_system -style system -params pS20_mapping.pdb 2 SDS_mapping.pdb 3
+    python mapper.py -traj pS20-2-SDS-3.pdb -prefix test_system -style system -params pS20_mapping.pdb 2 SDS.yaml 3
+    '''
+    import argparse as ap
+    parser = ap.ArgumentParser(description='general mapper utility')
+    parser.add_argument('-traj', type=str, required=True, help='traj to map')
+    parser.add_argument('-top', type=str, default=None, help='topology for reading non-pdb files')
+    parser.add_argument('-prefix', type=str, default=None, help='optional prefix. default is to use traj filename root.')
+    parser.add_argument('-style', type=str, required=True, choices=['single','system'], help='whether to use single-chain or system parsing')
+    parser.add_argument('-mode', type=str, choices=['aa','cg','pdb','short','shortest'], default='aa', help='mapping specification format')
+    parser.add_argument('-params', nargs='+', help = 'files specifying mappings. If more than one, can collate together into a system.')
+    args = parser.parse_args()
+
+    if args.prefix is None:
+        prefix = os.path.splitext(args.traj)
+    else:
+        prefix = args.prefix
+
+    if args.style == 'single':
+        if len( args.params ) > 1:
+            raise ValueError('single mode selected, but #params more than one: {}'.format(args.params))
+        t = mdtraj.load(args.traj)
+        filemap = args.params[0]
+        mode = args.mode
+        
+        if filemap.endswith('pdb'):
+            aa_indices_in_cg, cg_site_of_aa = process_pdbfile( filemap )
+            shorthand = None
+        else:
+            aa_indices_in_cg, cg_site_of_aa, shorthand = process_mappingfile(filemap,mode)
+        
+        traj_mapped = map_single(t,aa_indices_in_cg)
+        traj_mapping = generate_pdb_mapping(t, cg_site_of_aa)
+        save(prefix, aa_indices_in_cg, cg_site_of_aa, 
+                traj_mapped = traj_mapped, traj_mapping = traj_mapping, 
+                shorthand = shorthand, unmapped = args.traj )
+    elif args.style == 'system':
+        #Note for simplicity the 'system' style does not take a mode specification. Only uses .pdb mappings or aa_indices_in_cg mappings.
+        if args.top is None:
+            t = mdtraj.load(args.traj)
+        else:
+            t = mdtraj.load( args.traj, top=args.top )
+    
+        if len( args.params ) == 1:
+            print('1 system parameter file received, assume contains system information')
+            filemap = args.params[0]
+            with open(filemap,'r') as stream:
+                tmp = yaml.load(stream)
+            system_spec = tmp['system']
+        elif len( args.params ) >= 1:
+            print('multiple parameters received, assume is pairs of: mapping_file, # of molecule')
+            if len(args.params) % 2 != 0:
+                raise ValueError('need even number of parameter arguments, but received odd amount')
+            #now, essentially process the arguments into a system specification that I would've expected in a system mapping file        
+            chain_mapping_files = args.params[::2]
+            chain_numbers = [ int(n) for n in args.params[1::2] ]
+            system_spec = list( zip( chain_mapping_files, chain_numbers ) )
+
+        #do the mapping
+        system_aa_indices_in_cg, new_topology = process_mapping_system( system_spec )
+        new_traj = map_multiple(t, new_topology, system_aa_indices_in_cg)
+        new_traj.save(prefix + '_mapped.dcd')
+        new_traj[0].save(prefix + '_mapped.pdb')
+        
+        #save using prefix
+        d = { 'traj_unmapped': args.traj,
+              'top_unmapped': args.top,
+              'traj_mapped': prefix + '_mapped.dcd',
+              'top_mapped': prefix + '_mapped.pdb',
+              'system': system_spec,
+              'system_aa_indices_in_cg': system_aa_indices_in_cg
+            }
+        save_dict( prefix + '_mapping.yaml', d, header = '{} mapping summary'.format(prefix) ) 
+    else:
+        raise ValueError('Unrecognized style {}'.format(args.style))
+
+
 
 # ===== Tests =====
 ## Testing System
+'''
 systemfile = 'system_map.yaml'
 filename = 'pS20-2-SDS-3.pdb'
 prefix = os.path.splitext(filename)[0]
@@ -536,6 +646,7 @@ t = mdtraj.load(filename)
 system_aa_indices_in_cg, new_topology = process_mapping_system(systemfile)
 new_traj = map_multiple(t, new_topology, system_aa_indices_in_cg)
 new_traj.save(prefix + '_mapped.pdb')
+'''
 
 ## Testing Single Chain
 test_singlechain = False
