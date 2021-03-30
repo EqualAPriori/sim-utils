@@ -23,24 +23,11 @@
 
 import numpy as np
 import mdtraj
-import ruamel.yaml as YAML
+import yamlhelper as yaml
+import topologify
 import os
 
 # ===== File I/O =====
-def create_yaml():
-    '''
-    Notes
-    -----
-    https://stackoverflow.com/questions/49669236/ruamel-yaml-bad-dump
-    '''
-    yaml = YAML.YAML()
-    yaml.explicit_start = True
-    yaml.default_flow_style = None 
-    yaml.encoding = "utf-8"     # default when using YAML() or YAML(typ="rt")
-    yaml.allow_unicode = True   # always default in the new API
-    yaml.errors = "strict"
-    return yaml
-yaml = create_yaml()
 
 def save(prefix,aa_indices_in_cg,cg_site_of_aa,shorthand=None,traj_mapped=None, traj_mapping=None, unmapped=None):
     mappingfile = prefix + '_mapping.yaml'
@@ -60,15 +47,11 @@ def save(prefix,aa_indices_in_cg,cg_site_of_aa,shorthand=None,traj_mapped=None, 
             'shorthand': shorthand
         }
 
-    save_dict( mappingfile, d, header = '# mapping specifications for molecule {}\n'.format(prefix) )
+    yaml.save_dict( mappingfile, d, header = '# mapping specifications for molecule {}\n'.format(prefix) )
     #with open(mappingfile,'w') as f:
     #    f.write('# mapping specifications for molecule {}\n'.format(prefix))
     #    yaml.dump(d,f)
 
-def save_dict( filename, mydict, header=None ):
-    with open( filename, 'w' ) as f:
-        f.write('# {}\n'.format(header))
-        yaml.dump( mydict, f )
 
 # ===== Mapping Utilities =====
 def generate_pdb_mapping(traj,mapping):
@@ -359,8 +342,7 @@ def process_mappingfile(filename,mode,customfield=None):
     '''
     For if the (single chain) mapping uses a yaml/text-based specification of the array
     '''
-    with open(filename,'r') as stream:
-        mapping = yaml.load(stream)
+    mapping = yaml.load(filename)
    
     if mode.lower() == 'pdb':
         my_mapping = mapping['pdbfile_mapping']
@@ -405,8 +387,7 @@ def process_mapping_system(filename):
     Modified such that can take a filename, or a system_spec list of lists!
     """
     if type(filename) is str:
-        with open(filename,'r') as stream:
-            params = yaml.load(stream)
+        params = yaml.load(filename)
         system_spec = params['system']
     else: #treat filename as system_spec list of lists
         system_spec = filename
@@ -430,9 +411,7 @@ def process_mapping_system(filename):
             aa_indices_in_cg,_ = generate_single_mapping_shorthand( mode='shortest',shorthand=custom )
             traj_mapped = map_single( mdtraj.load(mappingfile),aa_indices_in_cg )
         elif mappingfile.endswith('yaml'):
-            with open(mappingfile,'r') as stream:
-                chain_mapping_spec = yaml.load(stream)
-
+            chain_mapping_spec = yaml.load(mappingfile)
             if custom is None:
                 print('Recognizing .yaml mapping specification for {}, using the aa_indices_in_cg section'.format(mappingfile))
                 aa_indices_in_cg = chain_mapping_spec['aa_indices_in_cg'] 
@@ -451,32 +430,11 @@ def process_mapping_system(filename):
     system_aa_indices_in_cg = generate_system_mapping(mappings)
     
     #create new topology
-    sub_topologies = [None]*len(tops)
-
-    new_topology = mdtraj.Topology()
-    for ic,chain in enumerate(tops):
-        sub_topologies[ic] = replicate_topology( chain[0],chain[1] )
-        new_topology = new_topology.join(sub_topologies[ic])
+    new_topology = topologify.create_system(tops)
 
     #do the mapping
     return system_aa_indices_in_cg, new_topology
 
-
-def replicate_topology(top,n_replicates):
-    '''
-    Try to be more efficient than sequentially adding (which I believe can cost a lot of iterations)
-    '''
-    bits = np.binary_repr(n_replicates)
-    power2_replicates = [top]
-    for ia in range( len(bits)-1 ):
-        power2_replicates.append( power2_replicates[-1].join(power2_replicates[-1]) )
-
-    new_top = mdtraj.Topology()
-    for ib,bit in enumerate(bits):
-        if int(bit) == 1:
-            new_top = new_top.join(power2_replicates[-(ib+1)])
-
-    return new_top
 
 def map_multiple(traj,cgtop,system_mapping):
     '''
@@ -604,8 +562,7 @@ if __name__ == "__main__":
         if len( args.params ) == 1:
             print('1 system parameter file received, assume contains system information')
             filemap = args.params[0]
-            with open(filemap,'r') as stream:
-                tmp = yaml.load(stream)
+            tmp = yaml.load(filemap)
             system_spec = tmp['system']
         elif len( args.params ) >= 1:
             print('multiple parameters received, assume is pairs of: mapping_file, # of molecule')
@@ -630,7 +587,7 @@ if __name__ == "__main__":
               'system': system_spec,
               'system_aa_indices_in_cg': system_aa_indices_in_cg
             }
-        save_dict( prefix + '_mapping.yaml', d, header = '{} mapping summary'.format(prefix) ) 
+        yaml.save_dict( prefix + '_mapping.yaml', d, header = '{} mapping summary'.format(prefix) ) 
     else:
         raise ValueError('Unrecognized style {}'.format(args.style))
 
