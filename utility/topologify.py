@@ -1,10 +1,10 @@
 #! Helper functions for representing topolgies
 #  TODO:
-#  1) shorthand building molecule from residues
-#  2) aliases
-#  3) SMILES translator. Think about where I'd want to use that --> in residue definition? molecule definition?
+#  -) aliases
+#  -) SMILES translator. Think about where I'd want to use that --> in residue definition? molecule definition?
 #       essentially, use SMILES to generate the beadlist and bondlist
-# 
+#  -) smarter pathing for loading files
+#
 import numpy as np
 import mdtraj
 import yamlhelper as yaml
@@ -13,6 +13,7 @@ from collections import OrderedDict
 
 version='list'
 
+#===== General Utilities =====
 def create_system(tops):
     '''
     tops: list
@@ -62,8 +63,6 @@ def replicate_topology(top,n_replicates):
             new_top = new_top.join(power2_replicates[-(ib+1)])
 
     return new_top
-
-
 
 def symbolify(index):
     '''
@@ -131,7 +130,34 @@ def flatten_shorthand(mylist):
             raise ValueError('atom entry {} is not interpretable. Should be string or 2-element list/tuple')
     return new_list
 
+def load(trajfile,top=None):
+    ''' To replace mdtraj.load(trajfile, topfile) shorthand, with .yaml or csv+bond dat files'''
+    if isinstance(top,str):
+        if top.endswith('.yaml'):
+            print('detected .yaml topology file')
+            new_top = Topology(top)
+            processed_top = new_top.system.topology
+        elif top.endswith('.pdb'):
+            processed_top = top
+        else:
+            raise ValueError('Can not parse given top {}'.format(top))
+    elif isinstance(top,list) or isinstance(top,tuple):
+        if len(top) != 2:
+            raise ValueError('Seems like given topology should be .csv, bond.dat pair, but did not get exactly two inputs')
+        df = pandas.read_csv(top[0])
+        bonds = np.loadtxt(top[1])
+        processed_top = mdtraj.Topology.from_dataframe(df,bonds)
+    elif isinstance(top,Topology):
+        processed_top = top.system.topology
+    elif isinstance(top, mdtraj.Topology):
+        processed_top = top
+    
+    if top is None:
+        traj = mdtraj.load(trajfile)
+    else:
+        traj = mdtraj.load(trajfile, top=processed_top)
 
+    return traj
 
 #===== handling files =====
 class Topology():
@@ -275,6 +301,7 @@ class Topology():
         if isinstance( self.loaded_file['res_types'],list ):
             for ir,res_def in enumerate(self.loaded_file['res_types']):
                 resname = res_def['name']
+                print('--->Working on residue {}: {}'.format(ir,resname)) 
 
                 #linearize the atom list if needed, for easier bonding enumeration
                 old_bead_def = res_def['beads']
@@ -286,7 +313,7 @@ class Topology():
                 if isinstance(bond_def,str):
                     if bond_def.lower() in ['simple','contiguous','linear']:
                         new_bond_list = generate_bond_list( len(new_bead_list), style='simple' )
-                self.processed_file['res_types'][ir]['bonds'] = new_bond_list
+                        self.processed_file['res_types'][ir]['bonds'] = new_bond_list
 
                 #now process linker beads defaults
                 if 'head' not in res_def:
@@ -371,7 +398,7 @@ class Topology():
             for atom in tmp_traj.topology.atoms:
                 atom.element = self.bead_types[atom.name]
             self.mol_types[mol_name] = tmp_traj
-            mol_def = {'name':mol_name, 'def': mol_file, 'atoms':atoms_in_mol, 'bonds':bonds_in_mol}
+            mol_def = {'name':mol_name, 'def': mol_file, 'beads':atoms_in_mol, 'bonds':bonds_in_mol}
 
         elif style.lower() in ['residues']:
             shorthand_res_list = definition
@@ -415,7 +442,7 @@ class Topology():
             for atom in tmp_top.atoms:
                 atom.element = self.bead_types[atom.name]
             self.mol_types[mol_name] = mdtraj.Trajectory( np.zeros([1,len(atoms_in_mol),3]), tmp_top ) 
-            mol_def = {'name':mol_name, 'def': shorthand_res_list, 'atoms':atoms_in_mol, 'bonds':bonds_in_mol}
+            mol_def = {'name':mol_name, 'def': shorthand_res_list, 'beads':atoms_in_mol, 'bonds':bonds_in_mol}
 
         elif style.lower() in ['beads']:
             #building up from bead names, skipping residue definition!
@@ -449,7 +476,7 @@ class Topology():
             for atom in tmp_top.atoms:
                 atom.element = self.bead_types[atom.name]
             self.mol_types[mol_name] = mdtraj.Trajectory( np.zeros([1,len(atoms_in_mol),3]), tmp_top )
-            mol_def = {'name':mol_name, 'atoms':atoms_in_mol, 'bonds':bonds_in_mol}
+            mol_def = {'name':mol_name, 'beads':atoms_in_mol, 'bonds':bonds_in_mol}
 
         return tmp_top, mol_def
 
@@ -493,8 +520,3 @@ class Topology():
         #note: mdtraj may be unhappy loading system with unknown elements
 
         
-
-
-
-
-
