@@ -1,6 +1,9 @@
 #! Helper functions for representing topolgies
 #  TODO:
 #  1) shorthand building molecule from residues
+#  2) aliases
+#  3) SMILES translator. Think about where I'd want to use that --> in residue definition? molecule definition?
+#       essentially, use SMILES to generate the beadlist and bondlist
 # 
 import numpy as np
 import mdtraj
@@ -18,12 +21,30 @@ def create_system(tops):
     Notes:
     ------
     in future, consider creating topology from string/list specification
+    also can handle of tops are trajectories... then spit out a trajectory
     '''
-    sub_topologies = [None]*len(tops)
+    n_entries = len(tops)
+
+    sub_topologies = [None] * n_entries
     new_topology = mdtraj.Topology()
     for ic,chain in enumerate(tops):
-        sub_topologies[ic] = replicate_topology( chain[0],chain[1] )
+        tmp_top = chain[0]
+        if isinstance(chain[0],mdtraj.Trajectory):
+            tmp_top = chain[0].topology
+
+        sub_topologies[ic] = replicate_topology( tmp_top,chain[1] )
         new_topology = new_topology.join(sub_topologies[ic])
+
+    if all( [isinstance(entry[0],mdtraj.Trajectory) for entry in tops] ):
+        xyzlist = []
+        # then also replicate coordinates
+        for ic,chain in enumerate(tops):
+            xyz = chain[0].xyz[0]
+            n_replicates = chain[1]
+            xyzlist.append( np.tile(xyz,[1,n_replicates,1]) )
+        xyzs = np.concatenate(xyzlist, axis=1)
+        new_topology = mdtraj.Trajectory(xyzs,new_topology)
+
     return new_topology
 
 def replicate_topology(top,n_replicates):
@@ -41,6 +62,8 @@ def replicate_topology(top,n_replicates):
             new_top = new_top.join(power2_replicates[-(ib+1)])
 
     return new_top
+
+
 
 def symbolify(index):
     '''
@@ -61,12 +84,21 @@ def symbolify(index):
 
     return symbol
 
-cg_beadtypes = OrderedDict()
+cg_elements = [ (e.name,e) for n,e in mdtraj.element.Element._elements_by_atomic_number.items() if n >= 200 ]
+cg_beadtypes = OrderedDict( cg_elements )
+
 def add_cg_beadtype(name,mass,dummy_radius=1.0):
+    '''
+    convention is to use numbers > 200 for my atomic numbers.
+               & preprend symbols with digits to avoid conflict w/ existing atoms.
+    '''
     if name not in cg_beadtypes:
+        print('... successfully added new element {} with mass {}'.format(name,mass))
         index = len(cg_beadtypes)
         symbol = symbolify(index)
         cg_beadtypes[name] = mdtraj.element.Element(200+index, name, symbol, mass, dummy_radius)
+    else:
+        print('... found existing element {} with mass {}'.format(name,mass))
     return cg_beadtypes[name]
 
 def generate_bond_list(args,style='simple'):
@@ -91,10 +123,10 @@ def flatten_shorthand(mylist):
             if len(entry) == 2:
                 name = entry[0]
                 num_thing = entry[1]
-            new_list += [name] * num_thing
+                new_list += [name] * num_thing
             else: raise ValueError('entry {} not interpretable. Should be string or 2-element list/tuple')
         elif isinstance(entry,str):
-            new_list += [name]
+            new_list += [entry]
         else:
             raise ValueError('atom entry {} is not interpretable. Should be string or 2-element list/tuple')
     return new_list
@@ -122,15 +154,17 @@ class Topology():
     - allow for pickle, csv+bond.dat definitions
     '''
     def __init__(self,topdef=None):
-        self.top = None #mdtraj topology object of entire system
+        self.system = None #mdtraj topology object of entire system
         #objects that exporter will use, use mdtraj objects where possible:
-        self.bead_types = {}
-        self.res_types = {}
-        self.mol_types = {}
+        self.bead_types = {} #dictionary to mdtraj elements
+        self.res_types = {}  #dictionary of dictionary definitions for residues
+        self.mol_types = {}  #dictionary to trajectories of each chain
+        self.system_def = [] #list of (trajectory, #) pairs
 
         #objects having to do with yaml representation:
         self.loaded_file = None
         self.processed_file = None
+        '''
         self.definition = {
                 'path': './',
                 'bead_types': [],
@@ -138,6 +172,7 @@ class Topology():
                 'mol_types': [],
                 'system': None
                 }
+        '''
 
         if topdef is not None:
             self.load(topdef)
@@ -148,16 +183,14 @@ class Topology():
         dummy_radius = 1.0
         dummy_charge = 0.0
 
-        self.top = mdtraj.load(topdef)
+        self.system = mdtraj.load(topdef)
         self.processed_file = {
             'bead_types': [],
             'system': topdef
             }
-        self.top = mdtraj.load(topdef)
-        self.system = topdef
 
         # assume every unique atom name is an atom bead type
-        for atom in self.top.atoms:
+        for atom in self.system.topology.atoms:
             if atom.name not in self.bead_types:
 
                 # create dummy elements/bead types
@@ -277,28 +310,48 @@ class Topology():
                 if isinstance(mol_entry['def'],str): #a molecule definition file
                     mol_file = mol_entry['def']
                     if mol_file.endswith('pdb'):
-                        self.add_mol_type( mol_name, mol_file, style='pdb' )
+                        new_chain_top, new_chain_def = self.add_mol_type( mol_name, mol_file, style='pdb' )
+                        self.processed_file['mol_types'][im] = new_chain_def
                     else:
                         raise ValueError('unrecognized molecule definition file {}'.format(mol_entry['def']))
                 if isinstance(mol_entry['def'],list): #should be list of residues
                     print('\tattempting to build molecule from residues')
-                    new_chain_top, new_chain_def = add_mol_type( name, definition, style = 'residues', bonds = 'simple' )
+                    new_chain_top, new_chain_def = self.add_mol_type( mol_name, definition = mol_entry['def'], style = 'residues', bonds = 'simple' )
                     self.processed_file['mol_types'][im] = new_chain_def
-            else: #build up from residues
-                print('\tattempting to build molecule from residues')
-                new_chain_top, new_chain_def = self.add_mol_type( name, definition, style = 'residues', bonds = 'simple' )
+            else: #build up from beads
+                print('\tattempting to build molecule from beads')
+                new_chain_top, new_chain_def = self.add_mol_type( mol_name, definition = mol_entry['beads'], style = 'beads', bonds = 'simple' )
                 self.processed_file['mol_types'][im] = new_chain_def
 
         ## system set up
+        print('\n=== Processing System =====')
+        for im, entry in enumerate(self.loaded_file['system']):
+            print('--->Working on entry {}: {}'.format(im,entry)) 
+            if isinstance(entry,str):
+                #should be in format: name number
+                #w/out puncutuation!
+                entry = entry.split()
+                if len(entry) != 2:
+                    raise ValueError('entry {} does not have 2 elements as required'.format(entry))
+                entry = [entry[0], int(entry[1])]
+                self.processed_file['system'][im] = entry
+                
+            _mol_type = self.mol_types[entry[0]]
+            _n_replicates = int(entry[1])
+            self.system_def.append( (_mol_type, _n_replicates) )
+        print('replicating chains and assembling system')
+        self.system = create_system( self.system_def )
 
 
     def add_mol_type(self, mol_name, definition, style, bonds = 'simple'):
         '''
         use internally stored bead_type, res_type, mol_type data structures
         ''' 
+        print('adding molecule {} with definition style {}'.format(mol_name, style))
         if style.lower() in ['pdb']:
             mol_file = definition
-            tmp_top = mdtraj.load(mol_file) 
+            tmp_traj = mdtraj.load(mol_file)
+            tmp_top = tmp_traj.topology
             atoms_in_mol = [ a.name for a in tmp_top.atoms ]
             bonds_in_mol = [ (b[0].index,b[1].index) for b in tmp_top.bonds ]
             if len(bonds_in_mol) == 0:
@@ -315,10 +368,12 @@ class Topology():
                     tmp_top.add_bond( a0,a1 )
                 bonds_in_mol = [ (b[0].index,b[1].index) for b in tmp_top.bonds ]
 
-            self.mol_types[mol_name] = tmp_top
+            for atom in tmp_traj.topology.atoms:
+                atom.element = self.bead_types[atom.name]
+            self.mol_types[mol_name] = tmp_traj
             mol_def = {'name':mol_name, 'def': mol_file, 'atoms':atoms_in_mol, 'bonds':bonds_in_mol}
 
-        if style.lower() in ['residues']:
+        elif style.lower() in ['residues']:
             shorthand_res_list = definition
             flat_res_list = flatten_shorthand( shorthand_res_list )
 
@@ -336,14 +391,14 @@ class Topology():
                     new_atom = tmp_top.add_atom( bead_name, self.bead_types[bead_name], r )
 
                     atoms_in_res.append( new_atom )
-                for bond_pair in res_def['bonds']:
-                    tmp_top.add_bond( atoms_in_res[bond_pair[0]], atoms_in_res[bond_pair[1]] )
+
                 if isinstance(bonds,str):
                     if bonds.lower() in ['simple','linear']:
                         if ir > 0: #add bonds between residues
                             tmp_top.add_bond( prev_tail, atoms_in_res[ res_def['head'] ] )
                         prev_tail = atoms_in_res[ res_def['tail'] ]
-                    raise ValueError('unknown mol bond specification: {}'.format(bonds))
+                    else:
+                        raise ValueError('unknown mol bond specification: {}'.format(bonds))
                 elif isinstance(bonds,list):
                     print('interpreting additional bonding specification as further intra-chain-indexed bonds to add')
                     for bond_pair in bonds:
@@ -352,13 +407,17 @@ class Topology():
                         tmp_top.add_bond( a0,a1 )
                 else:
                     raise ValueError('unknown mol bond specification: {}'.format(bonds))
+                for bond_pair in res_def['bonds']:
+                    tmp_top.add_bond( atoms_in_res[bond_pair[0]], atoms_in_res[bond_pair[1]] )
 
             atoms_in_mol = [ a.name for a in tmp_top.atoms ]
             bonds_in_mol = [ (b[0].index,b[1].index) for b in tmp_top.bonds ]
-            self.mol_types[mol_name] = tmp_top
-            mol_def = {'name':mol_name, 'def': mol_file, 'atoms':atoms_in_mol, 'bonds':bonds_in_mol}
+            for atom in tmp_top.atoms:
+                atom.element = self.bead_types[atom.name]
+            self.mol_types[mol_name] = mdtraj.Trajectory( np.zeros([1,len(atoms_in_mol),3]), tmp_top ) 
+            mol_def = {'name':mol_name, 'def': shorthand_res_list, 'atoms':atoms_in_mol, 'bonds':bonds_in_mol}
 
-        if style.lower() in ['beads']:
+        elif style.lower() in ['beads']:
             #building up from bead names, skipping residue definition!
             shorthand_bead_list = definition
             flat_bead_list = flatten_shorthand( shorthand_bead_list )
@@ -387,8 +446,10 @@ class Topology():
 
             atoms_in_mol = [ a.name for a in tmp_top.atoms ]
             bonds_in_mol = [ (b[0].index,b[1].index) for b in tmp_top.bonds ]
-            self.mol_types[mol_name] = tmp_top
-            mol_def = {'name':mol_name, 'def': mol_file, 'atoms':atoms_in_mol, 'bonds':bonds_in_mol}
+            for atom in tmp_top.atoms:
+                atom.element = self.bead_types[atom.name]
+            self.mol_types[mol_name] = mdtraj.Trajectory( np.zeros([1,len(atoms_in_mol),3]), tmp_top )
+            mol_def = {'name':mol_name, 'atoms':atoms_in_mol, 'bonds':bonds_in_mol}
 
         return tmp_top, mol_def
 
@@ -407,6 +468,33 @@ class Topology():
             self.processed_file = copy.deepcopy(topdef)
             self.process_system_dict()
 
-    def save(self,filename):
+    def save(self,prefix):
+        #prefix = os.path.splitext(filename)[0]
+        filename = '{}_processed.yaml'.format(prefix)
         yaml.save_dict(filename, self.processed_file, header='#Processed system topology definition.\n')
+
+        #save individual chain pdb files
+        for mol_name,mol in self.mol_types.items():
+            mol.save('{}_chain_{}.pdb'.format(prefix,mol_name))
+
+        #save system
+        if self.system.n_atoms < 10000:
+            self.system.save('{}_system.pdb'.format(prefix))
+        else:
+            self.system.save('{}_system.xyz'.format(prefix))
+            self.system.save('{}_system.dcd'.format(prefix))
+
+        df,bonds = self.system.topology.to_dataframe()
+        df.to_csv('{}_topology.csv'.format(prefix))
+        np.savetxt('{}_topology_bonds.dat'.format(prefix),bonds)
+        #pickle unhappy with fictional elements
+        #import pickle
+        #pickle.dump( self.system.topology, open("{}_topology.p".format(prefix),"wb") )
+        #note: mdtraj may be unhappy loading system with unknown elements
+
+        
+
+
+
+
 
