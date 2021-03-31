@@ -26,6 +26,7 @@ import mdtraj
 import yamlhelper as yaml
 import topologify
 import os
+from collections import OrderedDict
 
 # ===== File I/O =====
 
@@ -393,9 +394,11 @@ def process_mapping_system(filename):
         system_spec = filename
 
     mappings = []
+    mappingfiles = []
     tops = []
     for entry in system_spec:
         mappingfile = entry[0]
+        mappingfiles.append(mappingfile)
         n_replicates = entry[1]
         if len(entry) == 3:
             custom = entry[2]
@@ -432,8 +435,29 @@ def process_mapping_system(filename):
     #create new topology
     new_topology = topologify.create_system(tops)
 
-    #do the mapping
-    return system_aa_indices_in_cg, new_topology
+    #create necessary files for loading the mapped trajectory (compatible if # atoms > 99999)
+    #ultimately just a system section where each line is [chain_pdb_file, # chains], don't try to infer CG bead types yet
+    _trajs = []
+    _nreplicates = []
+    _chain_names = []
+    _chain_files = []
+    for ie,entry in enumerate(tops):
+        top = entry[0]
+        chain_name = os.path.splitext( mappingfiles[ie] )[0]
+        chain_file = chain_name + '_mapped_top.pdb'
+        _chain_files.append(chain_file)
+        _trajs.append( mdtraj.Trajectory( np.zeros([1,top.n_atoms,3]), top ) )
+        _nreplicates.append( entry[1] )
+        _chain_names.append( chain_name ) 
+
+        _trajs[-1].save( chain_file )
+    #moltype_defs = dict( list(zip( _chain_names, _chain_files )) )
+    moltype_defs = [ {'name':n, 'def':d} for (n,d) in zip(_chain_names,_chain_files) ]
+    system_def = list(zip( _chain_names, _nreplicates ))
+    mapped_def = { 'bead_types':None, 'res_types':None, 'mol_types':moltype_defs, 'system':system_def }
+    print(mapped_def)
+
+    return system_aa_indices_in_cg, new_topology, mapped_def
 
 
 def map_multiple(traj,cgtop,system_mapping):
@@ -574,10 +598,11 @@ if __name__ == "__main__":
             system_spec = list( zip( chain_mapping_files, chain_numbers ) )
 
         #do the mapping
-        system_aa_indices_in_cg, new_topology = process_mapping_system( system_spec )
+        system_aa_indices_in_cg, new_topology, mapped_def = process_mapping_system( system_spec )
         new_traj = map_multiple(t, new_topology, system_aa_indices_in_cg)
         new_traj.save(prefix + '_mapped.dcd')
         new_traj[0].save(prefix + '_mapped.pdb')
+        mapped_def['pdb'] = prefix + '_mapped.pdb'
         
         #save using prefix
         d = { 'traj_unmapped': args.traj,
@@ -588,6 +613,7 @@ if __name__ == "__main__":
               'system_aa_indices_in_cg': system_aa_indices_in_cg
             }
         yaml.save_dict( prefix + '_mapping.yaml', d, header = '{} mapping summary'.format(prefix) ) 
+        yaml.save_dict( prefix + '_mapped.yaml', mapped_def, header = '{} mapped system definition'.format(prefix) )
     else:
         raise ValueError('Unrecognized style {}'.format(args.style))
 

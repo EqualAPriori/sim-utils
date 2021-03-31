@@ -237,7 +237,11 @@ class Topology():
 
         ## bead types, mandatory
         print('\n=== Processing Bead Types =====')
-        if isinstance( self.loaded_file['bead_types'],list ):
+        if 'bead_types' not in self.loaded_file:
+            print('no bead definitions found, skipping')
+        elif self.loaded_file['bead_types'] is None:
+            print('no bead definitions found, skipping')
+        elif isinstance( self.loaded_file['bead_types'],list ):
             num_bead_types = 0                    
             bead_type_fields = None
             bead_type_defaults = None
@@ -298,7 +302,11 @@ class Topology():
 
         ## residue types
         print('\n=== Processing Residue Types =====')
-        if isinstance( self.loaded_file['res_types'],list ):
+        if 'bead_types' not in self.loaded_file:
+            print('no residue definitions found, skipping')
+        elif self.loaded_file['res_types'] is None:
+            print('no residue definitions found, skipping')
+        elif isinstance( self.loaded_file['res_types'],list ):
             for ir,res_def in enumerate(self.loaded_file['res_types']):
                 resname = res_def['name']
                 print('--->Working on residue {}: {}'.format(ir,resname)) 
@@ -330,6 +338,7 @@ class Topology():
         ## moltypes, mandatory
         print('\n=== Processing Molecule/Chain Types =====')
         for im,mol_entry in enumerate(self.loaded_file['mol_types']):
+            print(mol_entry)
             print('--->Working on mol {}: {}'.format(im,mol_entry['name'])) 
             mol_name = mol_entry['name']
             if 'def' in mol_entry:
@@ -396,6 +405,10 @@ class Topology():
                 bonds_in_mol = [ (b[0].index,b[1].index) for b in tmp_top.bonds ]
 
             for atom in tmp_traj.topology.atoms:
+                if atom.name not in self.bead_types:
+                    bead_name = atom.name
+                    print('Need to add new cg bead type {}, default mass {}'.format(bead_name, 1.0))
+                    self.bead_types[atom.name] =  add_cg_beadtype( bead_name, 1.0 )
                 atom.element = self.bead_types[atom.name]
             self.mol_types[mol_name] = tmp_traj
             mol_def = {'name':mol_name, 'def': mol_file, 'beads':atoms_in_mol, 'bonds':bonds_in_mol}
