@@ -1,4 +1,5 @@
 import ruamel.yaml as YAML
+import json
 
 def create_yaml():
     '''
@@ -20,6 +21,8 @@ def save_dict( filename, mydict, header=None ):
     with open( filename, 'w' ) as f:
         f.write('# {}\n'.format(header))
         yaml.dump( mydict, f )
+    with open( filename + '.json', 'w' ) as f:
+      json.dump( mydict, f, indent=4 )
 
 def load( filename ):
     with open(filename,'r') as stream:
