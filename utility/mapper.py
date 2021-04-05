@@ -27,6 +27,7 @@ import yamlhelper as yaml
 import topologify
 import os
 from collections import OrderedDict
+import parsify
 
 # ===== File I/O =====
 
@@ -399,6 +400,7 @@ def process_mapping_system(filename):
     for entry in system_spec:
         mappingfile = entry[0]
         mappingfiles.append(mappingfile)
+        print('\n---> generating system mapping for {}'.format(mappingfile))
         n_replicates = entry[1]
         if len(entry) == 3:
             custom = entry[2]
@@ -455,6 +457,7 @@ def process_mapping_system(filename):
     moltype_defs = [ {'name':n, 'def':d} for (n,d) in zip(_chain_names,_chain_files) ]
     system_def = list(zip( _chain_names, _nreplicates ))
     mapped_def = { 'bead_types':None, 'res_types':None, 'mol_types':moltype_defs, 'system':system_def }
+    print('\n---> final mapped_def:')
     print(mapped_def)
 
     return system_aa_indices_in_cg, new_topology, mapped_def
@@ -473,16 +476,18 @@ def map_multiple(traj,cgtop,system_mapping):
     num_cg = np.array([ len( entry ) for entry in system_mapping ]).sum()
     xyz = np.zeros( [traj.n_frames,cgtop.n_atoms,3] )
     num_cg_so_far = 0
-    for chain in system_mapping:
-        for cgbead_entry in chain:
+    for ichain,chain in enumerate(system_mapping):
+        if (ichain%100) == 0:
+          print('mapping molecule {}'.format(ichain))
+        for ibead,cgbead_entry in enumerate(chain):
             aa_indices = cgbead_entry[1]
             masses = np.array([traj.top.atom(ia).element.mass for ia in aa_indices])
 
             com = np.sum(traj.xyz[:,aa_indices,:] * masses[None,:,None],1) / masses.sum()
             xyz[:,num_cg_so_far,:] = com
             num_cg_so_far += 1
-
-    new_traj = mdtraj.Trajectory(xyz,cgtop)
+    print('finished mapping molecule {}'.format(ichain))
+    new_traj = mdtraj.Trajectory(xyz,cgtop,unitcell_lengths = traj.unitcell_lengths, unitcell_angles = traj.unitcell_angles)
     return new_traj
 
 def map_single(traj,mapping):
@@ -551,6 +556,7 @@ if __name__ == "__main__":
     parser.add_argument('-style', type=str, required=True, choices=['single','system'], help='whether to use single-chain or system parsing')
     parser.add_argument('-mode', type=str, choices=['aa','cg','pdb','short','shortest'], default='aa', help='mapping specification format')
     parser.add_argument('-params', nargs='+', help = 'files specifying mappings. If more than one, can collate together into a system.')
+    parser.add_argument('-stride', default=1, type=int, help='stride for processing trajectory')
     args = parser.parse_args()
 
     if args.prefix is None:
@@ -579,15 +585,21 @@ if __name__ == "__main__":
     elif args.style == 'system':
         #Note for simplicity the 'system' style does not take a mode specification. Only uses .pdb mappings or aa_indices_in_cg mappings.
         if args.top is None:
-            t = mdtraj.load(args.traj)
+            t = mdtraj.load(args.traj, stride=args.stride)
         else:
-            t = mdtraj.load( args.traj, top=args.top )
+            t = mdtraj.load( args.traj, top=args.top, stride=args.stride )
     
         if len( args.params ) == 1:
             print('1 system parameter file received, assume contains system information')
             filemap = args.params[0]
             tmp = yaml.load(filemap)
             system_spec = tmp['system']
+            if 'paths' in tmp:
+              for ie,entry in enumerate(system_spec):
+                fname = entry[0]
+                fname_full = parsify.findpath(fname, tmp['paths'])
+                system_spec[ie][0] = fname_full
+                print('updating {} to full path {}'.format(fname,fname_full))
         elif len( args.params ) >= 1:
             print('multiple parameters received, assume is pairs of: mapping_file, # of molecule')
             if len(args.params) % 2 != 0:
@@ -598,8 +610,11 @@ if __name__ == "__main__":
             system_spec = list( zip( chain_mapping_files, chain_numbers ) )
 
         #do the mapping
+        print('=== Generate mapping for the system ===')
         system_aa_indices_in_cg, new_topology, mapped_def = process_mapping_system( system_spec )
+        print('\n=== Do the mapping ===')
         new_traj = map_multiple(t, new_topology, system_aa_indices_in_cg)
+        print('\n=== Save ===')
         new_traj.save(prefix + '_mapped.dcd')
         new_traj[0].save(prefix + '_mapped.pdb')
         mapped_def['pdb'] = prefix + '_mapped.pdb'
