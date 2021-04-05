@@ -13,9 +13,9 @@
 #    in future, can think about how to better modularize all of these naming conventions
 #
 #
-#
-import sys
-sys.path.insert(1,'../')
+import sys,os
+#sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from context import sim
 import sim
 import re
 import copy
