@@ -4,12 +4,20 @@
 # TODO:
 # 1) in future, along with forcefield.py, consider breaking otu each potential into its own module to gather ff parsing, definition, and exports all in one place
 #
+# Important Usage Notes:
+# 1) requires dictionary file format to be in my specified format, with naming conventions for particular fields.
+#    i.e. relies on forcefield.ForceField() to do the parsing and making sure the important fields are in there
+#    i.e. having a params_sim section, naming convention for parameters and potential types, etc.
+#    in future, can think about how to better modularize all of these naming conventions
+#
+#
 import sys
 sys.path.insert(1,'../')
 import sim
 import re
 import copy
 import topologify,forcefield
+from collections import OrderedDict
 
 ## ===== parsers and utilities =====
 def isiterable( maybe_iterable ):
@@ -145,6 +153,7 @@ def set_system_settings( Sys, options ):
   return Sys
 
 # ===== Set up force field =====
+
 def create_forcefield( Sys, mytop, ff_dict, options={} ):
   '''
   Parameters
@@ -162,14 +171,13 @@ def create_forcefield( Sys, mytop, ff_dict, options={} ):
   print('===== Creating ForceField =====')
   if isinstance(ff_dict, forcefield.ForceField):
     ff_dict = ff_dict.processed_file
-  setup_dict = {'bond_harmonic':setup_bond_harmonic, 'pair_ljg':setup_pair_ljg,
-                'coulomb_smeared':setup_coulomb_smeared, 'external_sin':setup_external_sin}
+
   sim_atom_types = { atom.Name:atom for atom in Sys.World.AtomTypes }
   forcefields = []
 
-  for ff_type,setup in setup_dict.items():
+  for ff_type,setup_func in setup_dict.items():
     print('---> Setting up ff type {}'.format(ff_type))
-    forcefields.append( setup( Sys, sim_atom_types, ff_dict[ff_type] ) )
+    forcefields.extend( setup_func( Sys, sim_atom_types, ff_dict[ff_type] ) )
     print('')
 
   return forcefields
@@ -186,25 +194,9 @@ def setup_bond_harmonic( Sys, sim_atom_types, ff_dict ):
     the ff.processed_file['bond_harmonic'] section/format
   '''
   ff_type = 'bond_harmonic'
-  ffs = []
-  # Begin processing
-  for ff_entry in ff_dict['params_sim']:
-    # first check atom types are valid
-    if atomtypes_in_system( ff_entry['species'], sim_atom_types ):
-      print('adding {} for species {}'.format(ff_type, ff_entry['species']))
-      atypes0 = [ sim_atom_types[aname] for aname in ff_entry['species'][0] ]
-      atypes1 = [ sim_atom_types[aname] for aname in ff_entry['species'][1] ]
-      f = sim.atomselect.PolyFilter( [atypes0,atypes1], Bonded=True )
-
-      #define
-      p = sim.potential.Bond(Sys, Filter=f, Fixed=True, Dist0=ff_entry['Dist0']['val'], FConst=ff_entry['FConst']['val'], Label=ff_entry['name'])
-      p.Param.Dist0.Fixed = ff_entry['Dist0']['fixed']
-      p.Param.FConst.Fixed = ff_entry['FConst']['fixed']
-
-      #collect
-      ffs.append(p)
-    else:
-      raise ValueError('Some atom types required by {} potential {} not present, skipping'.format( ff_type, ff_entry ) )
+  param_names = ['Dist0','FConst']
+  addtl_dict = {'Fixed':True} #just default. fixables will be updated by ff_dict.
+  ffs = setup_ff_base( Sys, sim_atom_types, ff_dict, ff_type, param_names, addtl_dict )
   return ffs 
 
  
@@ -219,32 +211,9 @@ def setup_pair_ljg( Sys, sim_atom_types, ff_dict ):
     the ff.processed_file['pair_ljg'] section/format
   '''
   ff_type = 'pair_ljg'
-  ffs = []
-  # Begin processing
-  for ff_entry in ff_dict['params_sim']:
-    # first check atom types are valid
-    if atomtypes_in_system( ff_entry['species'], sim_atom_types ):
-      print('adding {} for species {}'.format(ff_type, ff_entry['species']))
-      atypes0 = [ sim_atom_types[aname] for aname in ff_entry['species'][0] ]
-      atypes1 = [ sim_atom_types[aname] for aname in ff_entry['species'][1] ]
-      f = sim.atomselect.PolyFilter( [atypes0,atypes1], Bonded=False )
-
-      #define
-      p = sim.potential.LJGaussian( Sys, Filter=f, Cut=ff_entry['Cut']['val'], Fixed=True,
-              B=ff_entry['B']['val'], Kappa=ff_entry['Kappa']['val'], Dist0=ff_entry['Dist0']['val'], 
-              Sigma=ff_entry['Sigma']['val'], Epsilon=ff_entry['Epsilon']['val'], Label=ff_entry['name'] )
-
-      p.Param.B.Fixed = ff_entry['B']['fixed']
-      p.Param.B.Min = -100. #default, don't restrict positive
-      p.Param.Kappa.Fixed = ff_entry['Kappa']['fixed']
-      p.Param.Dist0.Fixed = ff_entry['Dist0']['fixed']
-      p.Param.Sigma.Fixed = ff_entry['Sigma']['fixed']
-      p.Param.Epsilon.Fixed = ff_entry['Epsilon']['fixed']
-
-      #collect
-      ffs.append(p)
-    else:
-      raise ValueError('Some atom types required by {} potential {} not present, skipping'.format( ff_type, ff_entry ) )
+  param_names = ['Cut','B','Kappa','Dist0','Sigma','Epsilon']
+  addtl_dict = {'Fixed':True} #just default. fixables will be updated by ff_dict.
+  ffs = setup_ff_base( Sys, sim_atom_types, ff_dict, ff_type, param_names, addtl_dict )
   return ffs 
 
 def setup_coulomb_smeared( Sys, sim_atom_types, ff_dict ):
@@ -262,7 +231,9 @@ def setup_coulomb_smeared( Sys, sim_atom_types, ff_dict ):
   Note Ewald needs periodic boundary condition, *requires* box size to be set already!
   '''
   ff_type = 'coulomb_smeared'
-  ffs = []
+  param_names = ['Cut','Coef','BornA']
+  addtl_dict = {'FixedCoef':True, 'FixedBornA':True} #just default. fixables will be updated by ff_dict.
+  ffs = setup_ff_base( Sys, sim_atom_types, ff_dict, ff_type, param_names, addtl_dict )
 
   # No matter what, need to add Ewald
   ff_defaults = ff_dict['defaults_sim']
@@ -270,28 +241,7 @@ def setup_coulomb_smeared( Sys, sim_atom_types, ff_dict ):
       Cut=ff_defaults['Cut']['val'], Shift=ff_defaults['Shift'], Coef=ff_defaults['Coef']['val'], FixedCoef=ff_defaults['Coef']['fixed'], Label='ewald' )
   ffs.append(p)
 
-  # Begin processing
-  for ff_entry in ff_dict['params_sim']:
-    # first check atom types are valid
-    if atomtypes_in_system( ff_entry['species'], sim_atom_types ):
-      print('adding {} for species {}'.format(ff_type, ff_entry['species']))
-      atypes0 = [ sim_atom_types[aname] for aname in ff_entry['species'][0] ]
-      atypes1 = [ sim_atom_types[aname] for aname in ff_entry['species'][1] ]
-      f = sim.atomselect.PolyFilter( [atypes0,atypes1], Bonded=False )
-
-      #define
-      p = sim.potential.SmearedCoulombEwCorr( Sys, Filter=f, 
-          Cut=ff_entry['Cut']['val'], Shift=ff_entry['Cut']['val'], 
-          Coef=ff_entry['Coef']['val'], FixedCoef=ff_entry['Coef']['fixed'], 
-          BornA=ff_entry['BornA']['val'], FixedBornA=ff_entry['BornA']['fixed'], 
-          Label=ff_entry['name'])
-
-      #collect
-      ffs.append(p)
-    else:
-      raise ValueError('Some atom types required by {} potential {} not present, skipping'.format( ff_type, ff_entry ) )
   return ffs   
-
 
 def setup_external_sin( Sys, sim_atom_types, ff_dict ):
   ''' set up external sin potential
@@ -304,41 +254,12 @@ def setup_external_sin( Sys, sim_atom_types, ff_dict ):
     the ff.processed_file['external_sin'] section/format
   '''
   ff_type = 'external_sin'
-  ffs = []
-  # Begin processing
-  for ff_entry in ff_dict['params_sim']:
-    # first check atom types are valid
-    if atomtypes_in_system( ff_entry['species'], sim_atom_types ):
-      print('adding {} for species {}'.format(ff_type, ff_entry['species']))
-      atypes0 = [ sim_atom_types[aname] for aname in ff_entry['species'][0] ]
-      f = sim.atomselect.Filter( atypes0 )
-
-      #define
-      paramdict = { 'UConst':ff_entry['UConst']['val'], 'NPeriods':ff_entry['NPeriods']['val'],
-          'PlaneAxis':ff_entry['PlaneAxis']['val'], 'PlaneLoc':ff_entry['PlaneLoc']['val'], 
-          'Fixed': True
-          }
-      p = sim.potential.ExternalSinusoid( Sys, Filter=f, Label = ff_entry['name'], **paramdict)
-      for pname in paramindex:
-        p.Param.Fixed[paramindex[pname]] = ff_entry[pname]['fixed']
-
-      '''
-      p = sim.potential.ExternalSinusoid(Sys, Filter=f, Fixed=True, 
-           UConst=ff_entry['UConst']['val'], NPeriods=ff_entry['NPeriods']['val'],
-           PlaneAxis=ff_entry['PlaneAxis']['val'], PlaneLoc=ff_entry['PlaneLoc']['val'], 
-           Label=ff_entry['name'])
-      p.Param.UConst.Fixed = ff_entry['UConst']['fixed']
-      p.Param.NPeriods.Fixed = ff_entry['NPeriods']['fixed']
-      '''
-
-      #collect
-      ffs.append(p)
-    else:
-      raise ValueError('Some atom types required by {} potential {} not present, skipping'.format( ff_type, ff_entry ) )
+  param_names = ['UConst', 'NPeriods', 'PlaneAxis', 'PlaneLoc']
+  addtl_dict = {'Fixed':True} #just default. fixables will be updated by ff_dict.
+  ffs = setup_ff_base( Sys, sim_atom_types, ff_dict, ff_type, param_names, addtl_dict )
   return ffs   
 
-
-def setup_generic( Sys, sim_atom_types, ff_dict, ff_type, param_dict ):
+def setup_ff_base( Sys, sim_atom_types, ff_dict, ff_type, param_names, addtl_dict ):
   ''' set up generic potetnails, currently for 1 or 2-species defined interactions
   Parameters
   ----------
@@ -349,27 +270,42 @@ def setup_generic( Sys, sim_atom_types, ff_dict, ff_type, param_dict ):
     the ff.processed_file[ ff_type_name ] section/format
   ff_type : str
     name of the type of potential, for documentation purposes only
-  param_dict : dict
-    dict of arguments that are to be fed into the potential constructor, { param_name:param_value }
+  param_names : list
+    list of argument names that can be retrieved in ff_dict['param_sim']
+  addtl_dict : dict
+    additional arguments special to the potential type that need to be set, but are not in ff_dict
+    
 
   Notes
   -----
   relies on the dictionaries being fed in having all the fields that are required.
+  IMPORTANT naming conventions/requirements: 
+    requires is_bonded_dict to know whether ff_type is bonded or not
+    requires sim_potential_dict to know what sim.potential to call with given ff_type
+    requires param_names in ff_dict to be same as in sim definition! otherwise, will need a naming mapping dict to know how to parse ff_dict. can maybe implement later...
   '''
+
   ffs = []
   # Begin processing
   for ff_entry in ff_dict['params_sim']:
     # first check atom types are valid
     if atomtypes_in_system( ff_entry['species'], sim_atom_types ):
       print('adding {} for species {}'.format(ff_type, ff_entry['species']))
-      atypes0 = [ sim_atom_types[aname] for aname in ff_entry['species'][0] ]
-      f = sim.atomselect.Filter( atypes0 )
+      atypes = [ [sim_atom_types[aname] for aname in species_set] for species_set in ff_entry['species'] ]
+      if len(atypes) == 1:
+        f = sim.atomselect.Filter( atypes )
+      elif len(atypes) == 2:
+        bonded = is_bonded_dict[ff_type]
+        f = sim.atomselect.PolyFilter( atypes, Bonded=bonded )
 
       #define
-      p = sim.potential.ExternalSinusoid( Sys, Filter=f, Label = ff_entry['name'], **paramdict)
+      param_dict = { param_name:ff_entry[param_name]['val'] for param_name in param_names }
+      for k,v in addtl_dict.items(): #add the additional default arguments to param_dict
+        param_dict[k] = v
+      p = sim_potential_dict[ff_type]( Sys, Filter=f, Label = ff_entry['name'], **param_dict)
       fixable_dict= { name:ii for ii,name in enumerate(p.Param.Names) }
       for param_name in fixable_dict:
-        p.Param.Fixed[paramindex[param_name]] = ff_entry[param_name]['fixed']
+        p.Param.Fixed[fixable_dict[param_name]] = ff_entry[param_name]['fixed']
 
       #collect
       ffs.append(p)
@@ -377,7 +313,17 @@ def setup_generic( Sys, sim_atom_types, ff_dict, ff_type, param_dict ):
       raise ValueError('Some atom types required by {} potential {} not present, skipping'.format( ff_type, ff_entry ) )
   return ffs   
 
+
+setup_dict = OrderedDict( [('bond_harmonic',setup_bond_harmonic), ('pair_ljg',setup_pair_ljg),
+              ('coulomb_smeared',setup_coulomb_smeared), ('external_sin',setup_external_sin)] )
+sim_potential_dict = { 'bond_harmonic':sim.potential.Bond, 
+    'pair_ljg':sim.potential.LJGaussian,
+    'external_sin':sim.potential.ExternalSinusoid, 
+    'coulomb_smeared':sim.potential.SmearedCoulombEwCorr }
+is_bonded_dict = { 'bond_harmonic': True, 'external_sin':False, 'coulomb_smeared':False, 'pair_ljg':False }
+
 # ===== misc. helpers =====
+
 def load_system( Sys, ff_file ):
   ''' loads Sys object, i.e. compiles Fortran and locks it in. '''
   pass
