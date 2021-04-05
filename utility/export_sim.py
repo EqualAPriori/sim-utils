@@ -325,6 +325,50 @@ sim_potential_dict = { 'bond_harmonic':sim.potential.Bond,
     'coulomb_smeared':sim.potential.SmearedCoulombEwCorr }
 is_bonded_dict = { 'bond_harmonic': True, 'external_sin':False, 'coulomb_smeared':False, 'pair_ljg':False }
 
+
+def save_params_to_dict( force_field, out_dict ):
+  ''' save parameters to ff_dict
+  Parameters
+  ----------
+  force_field: sim.potential.ForceField list
+  out_dict : dict-like
+    Should be the root-level, i.e. full system force field definition. Will save parameters to this dict.
+
+  Notes
+  -----
+  Will save using sim's variable naming convention. I.e. the output dictionary should have parameters in that format as well.
+  Version 0: Assume that the out_dict already has the entire structure set up already, i.e. all fields already exist
+  Version 1: Create and format the parameters appropriately in out_dict if they don't exist. Note that some of the common parameters, like cutoff, etc. won't be included in the first pass.
+  '''
+  ffdict = {p.Name:p for p in force_field}
+  fftype_map = {'bond':'bond_harmonic', 'ljg':'pair_ljg', 
+        'smearedcoulombEwCorr':'coulomb_smeared', 
+        'external_sinusoid':'external_sin', 'ewald':'skip'}
+
+  # For efficiency, collect potentials by type
+  ff_by_type = {}
+  for ff_sim in force_field:
+    ff_type_sim = ff_sim.Names[0]
+    if ff_type_sim not in ff_by_type:
+      ff_by_type[ ff_type_sim ] = []
+    ff_by_type[ ff_type_sim ].append(ff_sim)
+
+  # Now go through and set the potentials
+  for ff_type_sim,ffs in ff_by_type.items():
+    ff_type_out = fftype_map[ ff_type_sim ]
+    if ff_type_out in ['skip']:
+      continue
+    output_fflist = out_dict[ff_type_out]['params_sim'] 
+    ff_by_index_in_outdict = { ff['name']:ii for ii,ff in enumerate(output_fflist)}
+    print('---')
+    print(output_fflist)
+    print(ff_by_index_in_outdict)
+    for ff_sim in ffs:
+      ff_out = output_fflist[ ff_by_index_in_outdict[ff_sim.Label] ]
+      for param_name in ff_sim.Param.Names:
+        ff_out[param_name]['val'] = ff_sim.__getattr__(param_name)[0]
+
+
 # ===== misc. helpers for working with sim =====
 def set_params_from_file(force_field, ff_file):
   ''' Set sim ForceField list from a file
