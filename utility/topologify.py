@@ -326,7 +326,8 @@ class Topology():
                 self.processed_file['res_types'][ir]['beads'] = new_bead_list
 
                 #now add bonds, intra-residue
-                bond_def = res_def['bonds']
+                if 'bonds' in res_def: bond_def = res_def['bonds']
+                else: bond_def = 'simple'
                 if isinstance(bond_def,str):
                     if bond_def.lower() in ['simple','contiguous','linear']:
                         new_bond_list = generate_bond_list( len(new_bead_list), style='simple' )
@@ -334,11 +335,11 @@ class Topology():
 
                 #now process linker beads defaults
                 if 'head' not in res_def:
-                    print('defaulting head link for {} to be bead 1'.format(resname))
-                    self.processed_file['res_types'][ir]['head'] = 1
+                    print('defaulting head link for {} to be bead 0'.format(resname))
+                    self.processed_file['res_types'][ir]['head'] = 0
                 if 'tail' not in res_def:
-                    print('defaulting tail link for {} to be bead 1'.format(resname))
-                    self.processed_file['res_types'][ir]['tail'] = 1
+                    print('defaulting tail link for {} to be bead 0'.format(resname))
+                    self.processed_file['res_types'][ir]['tail'] = 0
 
                 self.res_types[resname] = self.processed_file['res_types'][ir]
         else:
