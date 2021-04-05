@@ -383,16 +383,16 @@ def process_mappingfile(filename,mode,customfield=None):
        
     return aa_indices_in_cg, cg_site_of_aa, shorthand
 
-def process_mapping_system(filename):
+def process_mapping_system(topdef):
     """
     Create a system_aa_indices_in_cg mapping with *global* atom indices, as well as a new cg-system topology.
     Modified such that can take a filename, or a system_spec list of lists!
     """
-    if type(filename) is str:
-        params = yaml.load(filename)
-        system_spec = params['system']
-    else: #treat filename as system_spec list of lists
-        system_spec = filename
+    if type(topdef) is str:
+        topdef = yaml.load(topdef)
+        system_spec = topdef['system']
+    else: #treat topdef as dictionary of specifications
+        system_spec = topdef['system']
 
     mappings = []
     mappingfiles = []
@@ -400,7 +400,13 @@ def process_mapping_system(filename):
     for entry in system_spec:
         mappingfile = entry[0]
         mappingfiles.append(mappingfile)
+
         print('\n---> generating system mapping for {}'.format(mappingfile))
+        if 'paths' in topdef: #use smart pathing to find file
+          mappingfile_full = parsify.findpath(mappingfile, topdef['paths'])
+          #print('updating {} to full path {}'.format(mappingfile,mappingfile_full))
+          mappingfile = mappingfile_full
+
         n_replicates = entry[1]
         if len(entry) == 3:
             custom = entry[2]
@@ -436,6 +442,8 @@ def process_mapping_system(filename):
     
     #create new topology
     new_topology = topologify.create_system(tops)
+    bead_types = list(set( [ a.name for a in new_topology.atoms ] )) #not most efficient, can optimize later
+    bead_types = [ [aname,1.0,0.0] for aname in bead_types ]
 
     #create necessary files for loading the mapped trajectory (compatible if # atoms > 99999)
     #ultimately just a system section where each line is [chain_pdb_file, # chains], don't try to infer CG bead types yet
@@ -445,7 +453,7 @@ def process_mapping_system(filename):
     _chain_files = []
     for ie,entry in enumerate(tops):
         top = entry[0]
-        chain_name = os.path.splitext( mappingfiles[ie] )[0]
+        chain_name = os.path.splitext( os.path.basename(mappingfiles[ie]) )[0]
         chain_file = chain_name + '_mapped_top.pdb'
         _chain_files.append(chain_file)
         _trajs.append( mdtraj.Trajectory( np.zeros([1,top.n_atoms,3]), top ) )
@@ -456,7 +464,11 @@ def process_mapping_system(filename):
     #moltype_defs = dict( list(zip( _chain_names, _chain_files )) )
     moltype_defs = [ {'name':n, 'def':d} for (n,d) in zip(_chain_names,_chain_files) ]
     system_def = list(zip( _chain_names, _nreplicates ))
-    mapped_def = { 'bead_types':None, 'res_types':None, 'mol_types':moltype_defs, 'system':system_def }
+
+    mapped_def = yaml.YAML.comments.CommentedMap( [ ('bead_types',bead_types), ('res_types',None), ('mol_types',moltype_defs), ('system',system_def) ] )
+    if 'paths' in topdef:
+      mapped_def['paths'] = topdef['paths']
+
     print('\n---> final mapped_def:')
     print(mapped_def)
 
@@ -592,14 +604,15 @@ if __name__ == "__main__":
         if len( args.params ) == 1:
             print('1 system parameter file received, assume contains system information')
             filemap = args.params[0]
-            tmp = yaml.load(filemap)
-            system_spec = tmp['system']
-            if 'paths' in tmp:
-              for ie,entry in enumerate(system_spec):
-                fname = entry[0]
-                fname_full = parsify.findpath(fname, tmp['paths'])
-                system_spec[ie][0] = fname_full
-                print('updating {} to full path {}'.format(fname,fname_full))
+            system_spec = yaml.load(filemap)
+            #tmp = yaml.load(filemap)
+            #system_spec = tmp['system']
+            #if 'paths' in tmp:
+              #for ie,entry in enumerate(system_spec):
+              #  fname = entry[0]
+              #  fname_full = parsify.findpath(fname, tmp['paths'])
+              #  system_spec[ie][0] = fname_full
+              #  print('updating {} to full path {}'.format(fname,fname_full))
         elif len( args.params ) >= 1:
             print('multiple parameters received, assume is pairs of: mapping_file, # of molecule')
             if len(args.params) % 2 != 0:
