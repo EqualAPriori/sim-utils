@@ -2,6 +2,27 @@
 # (C) Kevin Shen, 2021
 import re
 import copy
+import os
+
+# ===== Pathing =====
+def findpath( fname, paths ):
+  '''Return path to first instance of path/fname, from given list of paths
+  Parameters
+  ----------
+  fname : str
+  paths : str or list
+  '''
+  if paths is None:
+    paths = ''
+  if isinstance(paths,str): #assume none of [\s,:;] in the path name
+    paths = re.split(r'[\s,:;]+',paths)
+  for path in paths:
+    fname_full = os.path.abspath(path + '/' + fname)
+    if os.path.exists( fname_full ):
+      print('located file {} at path {}: {}'.format(fname,path,fname_full))
+      return fname_full
+  raise ValueError('file {} not found in paths {}'.format(fname,paths))
+
 
 # ===== Atomic Parsing Functions =====
 def isfloat(value):

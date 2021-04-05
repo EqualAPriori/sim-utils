@@ -10,6 +10,8 @@ import mdtraj
 import yamlhelper as yaml
 import os,copy
 from collections import OrderedDict
+import re
+import parsify
 
 version='list'
 
@@ -142,13 +144,14 @@ def load(trajfile,top=None):
         else:
             raise ValueError('Can not parse given top {}'.format(top))
     elif isinstance(top,list) or isinstance(top,tuple):
+        # if using .csv, bond.dat pair to define topology
         if len(top) != 2:
             raise ValueError('Seems like given topology should be .csv, bond.dat pair, but did not get exactly two inputs')
         df = pandas.read_csv(top[0])
         bonds = np.loadtxt(top[1])
         processed_top = mdtraj.Topology.from_dataframe(df,bonds)
     elif isinstance(top,Topology):
-        processed_top = top.system.topology
+        processed_top = top.system.topology #Topology object should be already processed/initialized, top.system is actually a mdtraj Trajectory
     elif isinstance(top, mdtraj.Topology):
         processed_top = top
     
@@ -180,7 +183,7 @@ class Topology():
     - allow for pickle, csv+bond.dat definitions
     '''
     def __init__(self,topdef=None):
-        self.system = None #mdtraj topology object of entire system
+        self.system = None #mdtraj trajectory object of entire system
         #objects that exporter will use, use mdtraj objects where possible:
         self.bead_types = {} #dictionary to mdtraj elements
         self.res_types = {}  #dictionary of dictionary definitions for residues
@@ -192,7 +195,7 @@ class Topology():
         self.processed_file = None
         '''
         self.definition = {
-                'path': './',
+                'paths': './',
                 'bead_types': [],
                 'res_types': [],
                 'mol_types': [],
@@ -209,10 +212,10 @@ class Topology():
         dummy_radius = 1.0
         dummy_charge = 0.0
 
-        self.system = mdtraj.load(topdef)
+        self.system = mdtraj.load(filename)
         self.processed_file = {
             'bead_types': [],
-            'system': topdef
+            'system': filename
             }
 
         # assume every unique atom name is an atom bead type
@@ -230,10 +233,16 @@ class Topology():
 
     def process_system_dict(self):
         '''
+        Notes
+        -----
         acts on stored self.loaded_file and self.processed_file
+        system object should be list of (moltype, #mol) tuples/lists.
+        if system topology defined by a full-system pdb, then might as well skip this whole process.
         '''
         print('===== Building topology =====')
         # now need to parse the sections...
+        if 'paths' not in self.loaded_file:
+          self.processed_file['paths'] = []
 
         ## bead types, mandatory
         print('\n=== Processing Bead Types =====')
@@ -346,7 +355,8 @@ class Topology():
                 if isinstance(mol_entry['def'],str): #a molecule definition file
                     mol_file = mol_entry['def']
                     if mol_file.endswith('pdb'):
-                        new_chain_top, new_chain_def = self.add_mol_type( mol_name, mol_file, style='pdb' )
+                        full_file = parsify.findpath(mol_file, self.processed_file['paths'])
+                        new_chain_top, new_chain_def = self.add_mol_type( mol_name, full_file, style='pdb' )
                         self.processed_file['mol_types'][im] = new_chain_def
                     else:
                         raise ValueError('unrecognized molecule definition file {}'.format(mol_entry['def']))
@@ -361,22 +371,29 @@ class Topology():
 
         ## system set up
         print('\n=== Processing System =====')
-        for im, entry in enumerate(self.loaded_file['system']):
-            print('--->Working on entry {}: {}'.format(im,entry)) 
-            if isinstance(entry,str):
-                #should be in format: name number
-                #w/out puncutuation!
-                entry = entry.split()
-                if len(entry) != 2:
-                    raise ValueError('entry {} does not have 2 elements as required'.format(entry))
-                entry = [entry[0], int(entry[1])]
-                self.processed_file['system'][im] = entry
-                
-            _mol_type = self.mol_types[entry[0]]
-            _n_replicates = int(entry[1])
-            self.system_def.append( (_mol_type, _n_replicates) )
-        print('replicating chains and assembling system')
-        self.system = create_system( self.system_def )
+        if isinstance(self.loaded_file['system'],str):
+          if self.loaded_file['system'].endswith('pdb'):
+            full_file = parsify.findpath(self.loaded_file['system'], self.processed_file['paths'])
+            self.system = mdtraj.load( full_file )
+          else:
+            raise ValueError('uncrecognized system definition file: {}'.format(self.loaded_file['system']))
+        else:
+          for im, entry in enumerate(self.loaded_file['system']):
+              print('--->Working on entry {}: {}'.format(im,entry)) 
+              if isinstance(entry,str):
+                  #should be in format: name number
+                  #ca use whitespace, `:`, `;` to separate
+                  entry = re.split(r'[\s,:;]+',entry)
+                  if len(entry) != 2:
+                      raise ValueError('entry {} does not have 2 elements as required'.format(entry))
+                  entry = [entry[0], int(entry[1])]
+                  self.processed_file['system'][im] = entry
+                  
+              _mol_type = self.mol_types[entry[0]]
+              _n_replicates = int(entry[1])
+              self.system_def.append( (_mol_type, _n_replicates) )
+          print('replicating chains and assembling system')
+          self.system = create_system( self.system_def )
 
 
     def add_mol_type(self, mol_name, definition, style, bonds = 'simple'):
