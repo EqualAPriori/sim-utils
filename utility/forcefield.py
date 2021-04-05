@@ -108,7 +108,6 @@ def parse_default(ffdict,outdict,section,field,fixable=True,defaultdefault=0.0):
       if fixable:
         parsed['fixed'] = True
 
-      outdict[section][field] = parsed
   else:
     vprint('Tried to access parameter/field {} in {}, but does not exist.'.format(field,section))
     parsed = {'val':defaultdefault}
@@ -118,7 +117,7 @@ def parse_default(ffdict,outdict,section,field,fixable=True,defaultdefault=0.0):
       outdict[section] = yaml.YAML.comments.CommentedMap()
       ffdict[section] = yaml.YAML.comments.CommentedMap()
 
-    outdict[section][field] = parsed
+  outdict[section][field] = parsed
 
   return parsed
   
