@@ -2,13 +2,16 @@
 # (C) Kevin Shen, 2021
 #
 # TODO:
-# 1) in future, along with forcefield.py, consider breaking otu each potential into its own module to gather ff parsing, definition, and exports all in one place
+# 1) in future, along with forcefield.py, consider breaking out each potential into its own module to gather ff parsing, definition, and exports all in one place
+# 2) writing from Sys.ForceField back out to my ff_dict format
+#
 #
 # Important Usage Notes:
 # 1) requires dictionary file format to be in my specified format, with naming conventions for particular fields.
 #    i.e. relies on forcefield.ForceField() to do the parsing and making sure the important fields are in there
 #    i.e. having a params_sim section, naming convention for parameters and potential types, etc.
 #    in future, can think about how to better modularize all of these naming conventions
+#
 #
 #
 import sys
@@ -182,7 +185,6 @@ def create_forcefield( Sys, mytop, ff_dict, options={} ):
 
   return forcefields
 
-
 def setup_bond_harmonic( Sys, sim_atom_types, ff_dict ):
   ''' set up harmonic bonds
   Parameters
@@ -198,7 +200,6 @@ def setup_bond_harmonic( Sys, sim_atom_types, ff_dict ):
   addtl_dict = {'Fixed':True} #just default. fixables will be updated by ff_dict.
   ffs = setup_ff_base( Sys, sim_atom_types, ff_dict, ff_type, param_names, addtl_dict )
   return ffs 
-
  
 def setup_pair_ljg( Sys, sim_atom_types, ff_dict ):
   ''' set up LJG interaction
@@ -303,9 +304,11 @@ def setup_ff_base( Sys, sim_atom_types, ff_dict, ff_type, param_names, addtl_dic
       for k,v in addtl_dict.items(): #add the additional default arguments to param_dict
         param_dict[k] = v
       p = sim_potential_dict[ff_type]( Sys, Filter=f, Label = ff_entry['name'], **param_dict)
-      fixable_dict= { name:ii for ii,name in enumerate(p.Param.Names) }
-      for param_name in fixable_dict:
-        p.Param.Fixed[fixable_dict[param_name]] = ff_entry[param_name]['fixed']
+      #fixable_dict= { name:ii for ii,name in enumerate(p.Param.Names) }
+      #for param_name in fixable_dict:
+      #  p.Param.Fixed[fixable_dict[param_name]] = ff_entry[param_name]['fixed']
+      for param_name in p.Param.Names:
+        p.__getattr__(param_name).Fixed = ff_entry[param_name]['fixed']
 
       #collect
       ffs.append(p)
@@ -322,26 +325,132 @@ sim_potential_dict = { 'bond_harmonic':sim.potential.Bond,
     'coulomb_smeared':sim.potential.SmearedCoulombEwCorr }
 is_bonded_dict = { 'bond_harmonic': True, 'external_sin':False, 'coulomb_smeared':False, 'pair_ljg':False }
 
-# ===== misc. helpers =====
+# ===== misc. helpers for working with sim =====
+def set_params_from_file(force_field, ff_file):
+  ''' Set sim ForceField list from a file
+  Parameters
+  ----------
+  force_field: sim.potential.ForceField list
+  ff_file : str
+    ff_file to load
+  '''
+  with open(ff_file, 'r') as of: s = of.read()
+  print('... Setting FF with file {} ...\n{}'.format(ff_file,s))
+  force_field.SetParamString(s)      
 
-def load_system( Sys, ff_file ):
-  ''' loads Sys object, i.e. compiles Fortran and locks it in. '''
-  pass
+def update_specific_params(force_field, params):
+  """Update specific terms of an existing Sys.ForceField
+  Parameters
+  ----------
+  force_field: sim.potential.ForceField list
+  params: list or tuple
+
+  Notes
+  -----
+  Expecting format is ('Name',bool) to set default for an entire potential
+  ('Name',(parameter,value,bool)) to set a specific parameter in a specific forcefield
+  
+  Also, this doesn't check for conflicts in the input params! I.e. this will be first in first out, later settings will override earlier settings
+  """
+  # first create look-up dict of forcefield
+  ffdict = {p.Name:p for p in force_field}
+
+  def set_parameter(param):
+    potential_name = param[0]
+    if isinstance(param[1],bool):
+      print('Setting {} fixed status to all {}'.format(potential_name,param[1]))
+      ffdict[potential_name].Fixed[:] = param[1]
+    elif isinstance(param[1],(list,tuple)):
+      print('Setting {}, {}'.format(potential_name,param[1]))
+      param_name = param[1][0]
+      for entry in param[1][1:]:
+        if isinstance(entry,bool):
+          ffdict[potential_name].__getattr__(param_name).Fixed = entry
+        elif isinstance(entry,float):
+          ffdict[potential_name].__getattr__(param_name)[0] = entry 
+    else:
+      raise ValueError("given param {} option not understood".format(param))
+
+  if isinstance(params,(list,tuple)):
+    if not isinstance(params[0],(list,tuple)):
+      param = params
+      set_parameter(param)
+    else:
+      print('detected list of tuples')
+      for param in params: 
+        set_parameter(param)       
+  else: 
+    raise ValueError('params should be entered as tuple/list of tuples and lists')
+
+def get_free_params(force_field):
+  ''' Get list of currently free parameters 
+  Parameters
+  ----------
+  force_field: sim.potential.ForceField list
+
+  Returns
+  -------
+  free_params: list
+    list of (potential.Name, param_name) tuples for easy access later
+  '''
+  free_params = []
+  for potential in force_field:
+    for ip,param_name in enumerate(potential.Param.Names):
+      fixed = potential.Fixed[ip]
+      if not fixed:
+        free_params.append( (potential.Name,param_name) )
+  return free_params
+
+def toggle_params_fixed(force_field,params,fixed):
+  ''' toggle the fixed state of specified parameters to a specified boolean value
+  Parameters
+  ----------
+  force_field : sim.potential.ForceField list
+  params : list
+    list of (potential.Name, param_name) tuples for easy access later
+  fixed: boolean
+    the boolean value to toggle to
+
+  Notes
+  -----
+  In the future can consider the default toggle state to switch to opposite value, instead of blanket setting the value of everything in `params` to `fixed`
+  '''
+  ffdict = {p.Name:p for p in force_field}
+  for param in params:
+    potential_name = param[0]
+    parameter_name = param[1]
+    ffdict[potential_name].__getattr__(parameter_name).Fixed = fixed
+
+def load_system( _Sys, ff_file = None ):
+  ''' loads Sys object, i.e. compiles Fortran and locks it in. 
+  Parameters
+  ----------
+  _Sys : sim.system
+  ff_file : str
+    sim-format force field file to load
+
+  Notes
+  -----
+  Also sets up histogram. Can consider exposing those default settings somewhere else.
+  As an idiom/shorthand, allowing specifying ff_file with this function, s.t. can load and get a system set up for optimizing in one go.
+  '''
+  # set up initial parameters
+  if ff_file is not None: 
+      set_params_from_file(_Sys.ForceField, ff_file)
+ 
+  print('--- Force Field Summary: {} ---'.format(_Sys.ForceField))
+  print('{}'.format(_Sys.ForceField.ParamString()))
+
+  # set up histograms
+  for P in _Sys.ForceField:
+      P.Arg.SetupHist(NBin = 10000, ReportNBin = 100)
+
+  # lock and load
+  _Sys.Load()
 
 
 
 # ===== Notes =====
-# Sys.ForceField.extend(force_field)
-# load_system
-
-# Other updates and settings
-#Still required:
-'''
-Sys.BoxL = sys_params.box
-print('Setting box: {}'.format(Sys.BoxL))
-'''
-
 # Set up optimizer
 
 
-# Set up other stuff
