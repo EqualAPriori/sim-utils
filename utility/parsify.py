@@ -149,13 +149,13 @@ def parse_entry(entry, delim=';'):
   >>> parsify.parse_entry({'B':{'val':1.0, 'fixed':False}})
   {'B': {'fixed': False, 'val': 1.0}}
   '''
-
+  #print('received {}'.format(entry))
   if isinstance(entry,list) and len(entry) == 1:
     entry = entry[0]
   if isinstance(entry,str): 
     #entry = [ e.strip() for e in entry.split(delim) ]
     entry = [ e.strip() for e in re.split(r'[\s,:{}]+'.format(delim), entry)]
-  if isinstance(entry,float) or isinstance(entry,bool):
+  if isinstance(entry,float) or isinstance(entry,bool) or isinstance(entry,int):
     entry = [entry]
 
   processed_entry = {}
@@ -163,8 +163,12 @@ def parse_entry(entry, delim=';'):
     for ie,el in enumerate(entry):
       if isbool(el):
         entry[ie] = tobool(el)
-      if isfloat(el):
+      elif isinstance(el,int):
+        entry[ie] = el
+      elif isfloat(el):
         entry[ie] = float(el)
+      else:
+        entry[ie] = el
 
     if isinstance(entry[0],str) and entry[0].lower() in ['name']:
       processed_entry = {'name': entry[1]}
@@ -177,8 +181,9 @@ def parse_entry(entry, delim=';'):
         processed_entry = {paramname:parse_entry(field)}
     else: #this is the case when we just get a value
       for el in entry:
-        if isinstance(el,float): processed_entry['val'] = el
         if isinstance(el,bool):  processed_entry['fixed'] = el
+        elif isinstance(el,int): processed_entry['val'] = el
+        elif isinstance(el,float): processed_entry['val'] = el
     entry = processed_entry
 
   if isinstance(entry,dict):
@@ -188,7 +193,7 @@ def parse_entry(entry, delim=';'):
     else:
       for k,v in entry.items():
         processed_entry[k] = parse_entry(v)
-
+  #print(processed_entry)
   return processed_entry
 
 def parse_potential_entry(entry,nbody,store_dict=None,prefix=''):
