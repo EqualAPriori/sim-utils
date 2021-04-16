@@ -466,8 +466,9 @@ def process_mapping_system(topdef):
     system_def = list(zip( _chain_names, _nreplicates ))
 
     mapped_def = yaml.YAML.comments.CommentedMap( [ ('bead_types',bead_types), ('res_types',None), ('mol_types',moltype_defs), ('system',system_def) ] )
-    if 'paths' in topdef:
-      mapped_def['paths'] = topdef['paths']
+    #if 'paths' in topdef:
+    #  mapped_def['paths'] = topdef['paths']
+    mapped_def['paths'] = os.getcwd() #note that in the above, the chain_files are newly generated single-chain mapped files, in case the given definition was not in .pdb format
 
     print('\n---> final mapped_def:')
     print(mapped_def)
@@ -563,13 +564,15 @@ if __name__ == "__main__":
     import argparse as ap
     parser = ap.ArgumentParser(description='general mapper utility')
     parser.add_argument('-traj', type=str, required=True, help='traj to map')
-    parser.add_argument('-top', type=str, default=None, help='topology for reading non-pdb files')
+    parser.add_argument('-top', type=str, nargs='+', default=None, help='topology for reading non-pdb files')
     parser.add_argument('-prefix', type=str, default=None, help='optional prefix. default is to use traj filename root.')
     parser.add_argument('-style', type=str, required=True, choices=['single','system'], help='whether to use single-chain or system parsing')
     parser.add_argument('-mode', type=str, choices=['aa','cg','pdb','short','shortest'], default='aa', help='mapping specification format')
     parser.add_argument('-params', nargs='+', help = 'files specifying mappings. If more than one, can collate together into a system.')
     parser.add_argument('-stride', default=1, type=int, help='stride for processing trajectory')
     args = parser.parse_args()
+
+    print(args.top)
 
     if args.prefix is None:
         prefix = os.path.splitext(args.traj)
@@ -599,7 +602,15 @@ if __name__ == "__main__":
         if args.top is None:
             t = mdtraj.load(args.traj, stride=args.stride)
         else:
-            t = mdtraj.load( args.traj, top=args.top, stride=args.stride )
+            if isinstance(args.top,list) and len(args.top)==2:
+              import pandas
+              df = pandas.read_csv(args.top[0])
+              bonds = np.loadtxt(args.top[1])
+              top_mdtraj = mdtraj.Topology.from_dataframe(df,bonds)
+              top = top_mdtraj
+            else:
+              top = args.top[0]
+            t = mdtraj.load( args.traj, top=top, stride=args.stride )
     
         if len( args.params ) == 1:
             print('1 system parameter file received, assume contains system information')
