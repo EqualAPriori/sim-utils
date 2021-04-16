@@ -143,6 +143,20 @@ def create_system(sys_params, topology, interactions, special_options=None, load
         # lock and load
         Sys.Load()
     """
+    """
+    # set up initial parameters
+    if sys_params['forcefield_file']: 
+        #with open(sys_params['forcefield_file'], 'r') as of: s = of.read()
+        #Sys.ForceField.SetParamString(s)      
+        ff.set_param_from_file(Sys.ForceField, sys_params['forcefield_file'])
+
+    # set up histograms
+    for P in Sys.ForceField:
+        P.Arg.SetupHist(NBin = 10000, ReportNBin = 100)
+    # lock and load
+    Sys.Load()
+    """
+
    
     # 4) Other options
     print('... Setting other options, e.g. temperature and integration ...')
