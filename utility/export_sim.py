@@ -4,6 +4,12 @@
 # TODO:
 # 1) in future, along with forcefield.py, consider breaking out each potential into its own module to gather ff parsing, definition, and exports all in one place
 # 2) writing from Sys.ForceField back out to my ff_dict format
+#     only have simple implementation right now. need more work to get it to write a new forcefield object, de novo! tackle later once I have force field shorthand export as well.
+#   to export force field fully, would need:
+#   1) function to determine species AtomTypes
+#   2) know what parameters to extract from the potential. May end up needing to define function_specific functions, like we did for setup()
+#   3) if section doesn't exist, make it. fftype:params_sim:listofpotentials
+#      can make it export in shorthand, just need list of strings, and then two join commands!
 #
 #
 # Important Usage Notes:
@@ -105,7 +111,7 @@ def create_system( mytop, options=None ):
   # 2) Create 'World' and system 
   print('---> Creating World and Sys')
   World = sim.chem.World(sim_mol_types_list, Dim=3, Units=units)
-  sys_name = options['sys_name'] if (options and 'sys_name' in otpions and options['sys_name']) else 'Sys'
+  sys_name = options['sys_name'] if (options and 'sys_name' in options and options['sys_name']) else 'Sys'
   Sys = sim.system.System(World, Name = sys_name)
 
   for im, entry in enumerate( mytop['system'] ):
@@ -126,6 +132,7 @@ def set_system_settings( Sys, options ):
   Notes
   -----
   Preliminary implementation: require all the fields to be present to have well-defined system
+  options used:
   '''
   #box:
   Sys.BoxL = options['box'] #should be 3-element listable object
@@ -169,7 +176,7 @@ def create_forcefield( Sys, mytop, ff_dict, options={} ):
   Notes
   -----
   options: special options flags
-
+    - neutralize
   '''
   print('===== Creating ForceField =====')
   if isinstance(ff_dict, forcefield.ForceField):
@@ -180,7 +187,10 @@ def create_forcefield( Sys, mytop, ff_dict, options={} ):
 
   for ff_type,setup_func in setup_dict.items():
     print('---> Setting up ff type {}'.format(ff_type))
-    forcefields.extend( setup_func( Sys, sim_atom_types, ff_dict[ff_type] ) )
+    if ff_type == 'coulomb_smeared' and 'neutralize' in options and options['neutralize'] == True:
+      pass
+    elif ff_type in ff_dict:
+      forcefields.extend( setup_func( Sys, sim_atom_types, ff_dict[ff_type] ) )
     print('')
 
   return forcefields
@@ -215,6 +225,10 @@ def setup_pair_ljg( Sys, sim_atom_types, ff_dict ):
   param_names = ['Cut','B','Kappa','Dist0','Sigma','Epsilon']
   addtl_dict = {'Fixed':True} #just default. fixables will be updated by ff_dict.
   ffs = setup_ff_base( Sys, sim_atom_types, ff_dict, ff_type, param_names, addtl_dict )
+  #my default is to set B.Min to negative 100
+  for ff in ffs:
+    print('setting B.Min to -100.0 for {}'.format(ff.Label))
+    ff.B.Min = -100.0
   return ffs 
 
 def setup_coulomb_smeared( Sys, sim_atom_types, ff_dict ):
