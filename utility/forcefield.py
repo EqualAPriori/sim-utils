@@ -287,7 +287,7 @@ class bond_harmonic():
   fields_sim = OrderedDict({'FConst':{'fixable':True, 'defaultdefault':1.0},
             'Dist0':{'fixable':True, 'defaultdefault':0.0}})
 
-  fields_md = OrderedDict({'FConst':{'fixable':True, 'defaultdefault':2.0},
+  fields_md = OrderedDict({'FConst':{'fixable':True, 'defaultdefault':1.0},
             'Dist0':{'fixable':True, 'defaultdefault':0.0}})
   nbody = 2
   prefix = 'bond'
