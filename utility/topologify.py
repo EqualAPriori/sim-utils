@@ -415,6 +415,7 @@ class Topology():
                     print('bonds not detected in {}, filling in using style {}'.format(mol_file, bonds))
                     new_bond_list = generate_bond_list( len(new_bead_list), style='simple' )
                 else:
+                    new_bond_list =[] 
                     print('caution! no bonds detected in {}, and no supplemental bond definition given')
                 for bond_pair in new_bond_list:
                     a0 = tmp_top.atom( bond_pair[0] )
