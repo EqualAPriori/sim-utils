@@ -506,6 +506,10 @@ def load_system( _Sys, ff_file = None ):
   # lock and load
   _Sys.Load()
 
+#usually, for saving, just use Opt's wrapper for Sys.ForceField.ParamString()
+#def save_system(_Sys):
+#  ''' save force field for system '''
+
 
 
 # ===== Notes =====
