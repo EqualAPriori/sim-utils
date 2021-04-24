@@ -223,7 +223,7 @@ def setup_pair_ljg( Sys, sim_atom_types, ff_dict ):
   '''
   ff_type = 'pair_ljg'
   param_names = ['Cut','B','Kappa','Dist0','Sigma','Epsilon']
-  addtl_dict = {'Fixed':True} #just default. fixables will be updated by ff_dict.
+  addtl_dict = {'Fixed':True,'Shift':False} #just default. fixables will be updated by ff_dict.
   ffs = setup_ff_base( Sys, sim_atom_types, ff_dict, ff_type, param_names, addtl_dict )
   #my default is to set B.Min to negative 100
   for ff in ffs:
@@ -316,8 +316,13 @@ def setup_ff_base( Sys, sim_atom_types, ff_dict, ff_type, param_names, addtl_dic
       #define
       param_dict = { param_name:ff_entry[param_name]['val'] for param_name in param_names }
       for k,v in addtl_dict.items(): #add the additional default arguments to param_dict
-        param_dict[k] = v
+        if k in ff_entry:
+          param_dict[k] = ff_entry[k]
+        else:
+          param_dict[k] = v
       p = sim_potential_dict[ff_type]( Sys, Filter=f, Label = ff_entry['name'], **param_dict)
+      print(param_dict)
+      print(ff_entry['name'])
       #fixable_dict= { name:ii for ii,name in enumerate(p.Param.Names) }
       #for param_name in fixable_dict:
       #  p.Param.Fixed[fixable_dict[param_name]] = ff_entry[param_name]['fixed']
