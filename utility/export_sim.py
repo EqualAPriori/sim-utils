@@ -311,7 +311,8 @@ def setup_ff_base( Sys, sim_atom_types, ff_dict, ff_type, param_names, addtl_dic
         f = sim.atomselect.Filter( atypes )
       elif len(atypes) == 2:
         bonded = is_bonded_dict[ff_type]
-        f = sim.atomselect.PolyFilter( atypes, Bonded=bonded )
+        if bonded: f = sim.atomselect.PolyFilter( atypes, Bonded=bonded )
+        else: f = sim.atomselect.PolyFilter( atypes ) #Bonded=None
 
       #define
       param_dict = { param_name:ff_entry[param_name]['val'] for param_name in param_names }
