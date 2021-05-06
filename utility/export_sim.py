@@ -360,13 +360,14 @@ def save_params_to_dict( force_field, out_dict ):
   Version 0: Assume that the out_dict already has the entire structure set up already, i.e. all fields already exist
   Version 1: Create and format the parameters appropriately in out_dict if they don't exist. Note that some of the common parameters, like cutoff, etc. won't be included in the first pass.
   '''
+  print('SAVING sim forcefield parameters to an output dictionary')
   ffdict = {p.Name:p for p in force_field}
   fftype_map = {'bond':'bond_harmonic', 'ljg':'pair_ljg', 
         'smearedcoulombEwCorr':'coulomb_smeared', 
         'external_sinusoid':'external_sin', 'ewald':'skip'}
 
   # For efficiency, collect potentials by type
-  ff_by_type = {}
+  ff_by_type = {} #will be {ff_simtype: [list of sim potentials]}
   for ff_sim in force_field:
     ff_type_sim = ff_sim.Names[0]
     if ff_type_sim not in ff_by_type:
@@ -375,18 +376,19 @@ def save_params_to_dict( force_field, out_dict ):
 
   # Now go through and set the potentials
   for ff_type_sim,ffs in ff_by_type.items():
-    ff_type_out = fftype_map[ ff_type_sim ]
+    ff_type_out = fftype_map[ ff_type_sim ] #retrieve corresponding fftype name in lingua franca
     if ff_type_out in ['skip']:
       continue
     output_fflist = out_dict[ff_type_out]['params_sim'] 
-    ff_by_index_in_outdict = { ff['name']:ii for ii,ff in enumerate(output_fflist)}
+    ff_by_index_in_outdict = { ff['name']:ii for ii,ff in enumerate(output_fflist)} #dict to get index of a ff in the out_dict, given the ff's name
     print('---')
     print(output_fflist)
     print(ff_by_index_in_outdict)
-    for ff_sim in ffs:
+    for ff_sim in ffs: #Careful, I do not check if potential names are repeated!
       ff_out = output_fflist[ ff_by_index_in_outdict[ff_sim.Label] ]
-      for param_name in ff_sim.Param.Names:
-        ff_out[param_name]['val'] = ff_sim.__getattr__(param_name)[0]
+      for ip,param_name in enumerate(ff_sim.Param.Names):
+        ff_out[param_name]['val'] = float(ff_sim.__getattr__(param_name)[0])
+        ff_out[param_name]['fixed'] = bool(ff_sim.Fixed[ip])
 
 
 # ===== misc. helpers for working with sim =====
@@ -511,6 +513,20 @@ def load_system( _Sys, ff_file = None ):
 
   # lock and load
   _Sys.Load()
+
+def get_ff(FF,name):
+  ''' returns the potential with matching name from a Sys ForceField object
+  Parameters
+  ----------
+  FF : sim.ForceField
+  name : str
+
+  Returns
+  -------
+  ff : sim.potential
+  '''
+  ffs = [ff for ff in FF if ff.Label == name]
+  return ff
 
 #usually, for saving, just use Opt's wrapper for Sys.ForceField.ParamString()
 #def save_system(_Sys):
