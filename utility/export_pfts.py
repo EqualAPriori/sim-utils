@@ -6,13 +6,23 @@
 #
 # TODO:
 # 1) conversions (units? or between file formats)
-# 5) sim --> lingua franca
 # 6) running commands
 # 7) simple subsitutions of a script
 # 
+# Example:
+# - with a Sys constructed from ffdef, topdef, settings
+# - save/update the ffdef with Sys: 
+#   export_sim.save_params_to_dict( Sys.ForceField, ffdef.processed_file )
+#   ffdef.sim2md()
+# - write out
+#   ffdef.save(savename)
+#
+# - can then proceed to set up a pfts system!
+#
 
 #import sys,os
 #import re,copy
+import context #makes sure we get the forcefield.py and optimize.py defined in utility instead of legacy versions in parent directory
 import topologify,forcefield
 from collections import OrderedDict
 import yamlhelper as yaml
@@ -285,7 +295,7 @@ def generate_input(topdef, ffdef, settings):
       smallmols[mol_name] = mol_def 
     else:
       chains[mol_name] = mol_def
-
+  
   tmp['Chains'] = OrderedDict([('NChains',len(chains)), ('Countords',1), ('DiffuserMethod','SOS'), ('PolymerReferenceN',Nref)])
   for ic,(mol_name,mol_def) in enumerate(chains.items()):
     chainid = 'Chain{}'.format(ic+1)
@@ -293,7 +303,7 @@ def generate_input(topdef, ffdef, settings):
     nperblock = []
     blockspecies = []
     for block in mol_def['def']:
-      blockspecies.append(block[0])
+      blockspecies.append(beadID[block[0]])
       nperblock.append(block[1]) 
     nbeads = sum(nperblock)
     if nbeads != len(mol_def['beads']): raise ValueError("inferred bead number {} for molecule {} doesn't match explicit bead sequence".format(nbeads,mol_name))
@@ -340,6 +350,7 @@ def generate_input(topdef, ffdef, settings):
   else:
     cell_angles = [90.] * box_dim
 
+  update(tmp['Model1']['Cell'],settings['Cell'],'Dim',default=box_dim)
   update(tmp['Model1']['Cell'],settings['Cell'],'CellScaling',default=1.0)
   update(tmp['Model1']['Cell'],settings['Cell'],'CellLengths',mandatory=True)
   update(tmp['Model1']['Cell'],settings['Cell'],'CellAngles',default=cell_angles)
@@ -467,7 +478,7 @@ def generate_input(topdef, ffdef, settings):
     #do some inference... if Dist0=0, treat as DGC
     #if Dist0!=0 and FConst>=100.0, treat as FJC
     kuhns = [1.0, 1.0, 1.0]
-    if 'bond_harmonic' in ffdef.processed_file and 'params_sim' in ffdef.processed_file['coulomb_smeared']:
+    if 'bond_harmonic' in ffdef.processed_file and 'params_sim' in ffdef.processed_file['bond_harmonic']:
       print('\n--> Detected Bonding')
       FConst = np.zeros([n_bead_types,n_bead_types])
       Dist0 = np.zeros([n_bead_types,n_bead_types])
@@ -609,17 +620,25 @@ def generate_input(topdef, ffdef, settings):
     print('... {}'.format(CC))
   if tmp['Model1']['Composition']['Ensemble'].lower() == 'canonical':
     tmp['Model1']['Composition']['CChainDensity'] = CC
-    tmp['Model1']['Composition']['ChainVolFrac'] = chain_beadfrac if autochainfrac else inputchainfrac
-    tmp['Model1']['Composition']['SmallMoleculeVolFrac'] = smallmol_beadfrac if autosmallmolfrac else inputsmallmolfrac
+    if autochainfrac and not isinstance(chain_beadfrac,float) and len(chain_beadfrac) > 0:
+      tmp['Model1']['Composition']['ChainVolFrac'] = chain_beadfrac
+    elif not autochainfrac and inputchainfrac is not None > 0:
+      tmp['Model1']['Composition']['ChainVolFrac'] = inputchainfrac
+    if autosmallmolfrac and not isinstance(smallmol_beadfrac,float) and len(smallmol_beadfrac) > 0:
+      tmp['Model1']['Composition']['SmallMoleculeVolFrac'] = smallmol_beadfrac 
+    elif not autosmallmolfrac and inputsmallmolfrac is not None > 0:
+      tmp['Model1']['Composition']['SmallMoleculeVolFrac'] = inputsmallmolfrac
   if tmp['Model1']['Composition']['Ensemble'].lower() == 'grand':
     inputchainactivity = parse2list(settings['Composition']['ChainActivity'])
     inputsmallmolactivity = parse2list(settings['Composition']['SmallMoleculeActivity'])
     if len(inputchainactivity) != len(chain_beadfrac):
       raise ValueError('chain activity list length incommensurate with number of chains ({})'.format(len(chain_beadfrac)))
-    tmp['Model1']['Composition']['ChainActivity'] = inputchainactivity
+    elif len(inputchainactivity) > 0:
+      tmp['Model1']['Composition']['ChainActivity'] = inputchainactivity
     if len(inputsmallmolactivity) != len(smallmol_beadfrac):
       raise ValueError('chain activity list length incommensurate with number of chains ({})'.format(len(chain_beadfrac)))
-    tmp['Model1']['Composition']['SmallMoleculeActivity'] = inputsmallmolactivity
+    elif len(inputsmallmolactivity) > 0:
+      tmp['Model1']['Composition']['SmallMoleculeActivity'] = inputsmallmolactivity
 
   # = operators #fairly straightforward =
   print('\n===== DEFINING OPERATORS =====')
@@ -749,6 +768,7 @@ def write(filename,spec):
     spec = dict_to_str(spec)
   with open(filename,'w') as f:
     f.write(spec)
+    f.write('\n') #for some reason, pfts needs extra linebreak in order to parse correctly...
 
 #Test
 def test():
@@ -764,8 +784,8 @@ def test_minimal():
   write('tests_pfts/inputminimal_generated.in',spec)
   #print(specstring)
 
-test()
-test_minimal()
+#test()
+#test_minimal()
 
 
 
@@ -773,4 +793,7 @@ test_minimal()
 # Run system
 
 # doing simple substitutions
+
+
+
 
