@@ -1,5 +1,6 @@
 import ruamel.yaml as YAML
 import json
+from collections import OrderedDict
 
 def create_yaml():
     '''
@@ -13,6 +14,7 @@ def create_yaml():
     yaml.encoding = "utf-8"     # default when using YAML() or YAML(typ="rt")
     yaml.allow_unicode = True   # always default in the new API
     yaml.errors = "strict"
+    yaml.Representer.add_representer(OrderedDict, yaml.Representer.represent_dict)
     return yaml
 
 yaml = create_yaml()
