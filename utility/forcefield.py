@@ -428,6 +428,8 @@ class pair_ljg():
             Kappa = 0.5/(asmears1[0]**2.0 + asmears2[0]**2.0)
             outdict[section][ientry]['Kappa']['val'] = Kappa
             vprint('  Using asmear mixing rule, Kappa = {}'.format(Kappa))
+            outdict[section][ientry]['Cut']['val'] = 5.0*(0.5*(asmears1[0]**2.0+asmears2[0]**2.0))**0.5
+            vprint('  with cutoff = 5abar = {}'.format( outdict[section][ientry]['Cut']['val'] ))
           else:
             vprint('  CAUTION: Multiple bead pairs defined, but asmears are not consistent, cannot define unique Kappa for this potential. Using default.'.format())
 
@@ -452,6 +454,8 @@ class pair_ljg():
             sigma_g = (asmears1[0]**2.0 + asmears2[0]**2.0)**0.5
             outdict[section][ientry]['sigma_g']['val'] = sigma_g
             vprint('  Using asmear mixing rule, sigma_g = {}'.format(sigma_g))
+            outdict[section][ientry]['cut']['val'] = 5.0*(0.5*(asmears1[0]**2.0+asmears2[0]**2.0))**0.5
+            vprint('  with cutoff = 5abar = {}'.format( outdict[section][ientry]['Cut']['val'] ))
           else:
             vprint('  CAUTION: Multiple bead pairs defined, but asmears are not consistent, cannot define unique sigma_g for this potential. Using default.'.format())
 
