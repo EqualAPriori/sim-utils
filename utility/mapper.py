@@ -426,12 +426,12 @@ def process_mapping_system(topdef):
             if custom is None:
                 print('Recognizing .yaml mapping specification for {}, using the aa_indices_in_cg section'.format(mappingfile))
                 aa_indices_in_cg = chain_mapping_spec['aa_indices_in_cg'] 
-                traj_mapped = mdtraj.load(chain_mapping_spec['pdbfile_mapped'])
+                traj_mapped = mdtraj.load(parsify.findpath(chain_mapping_spec['pdbfile_mapped'], topdef['paths']))
             else:
                 #(e.g. if using shorthand)
                 print('Recognizing .yaml mapping specification for {}, using the {} section'.format(mappingfile,custom))
                 aa_indices_in_cg,_,_ = process_mappingfile(mappingfile,mode=custom,customfield=custom)
-                traj_mapped = map_single( mdtraj.load(chain_mapping_spec['pdbfile_unmapped']),aa_indices_in_cg )
+                traj_mapped = map_single( mdtraj.load(parsify.findpath(chain_mapping_spec['pdbfile_unmapped'], topdef['paths'])),aa_indices_in_cg )
         else:
             raise ValueError('chain/molecule mapping format not recognized')
             
@@ -570,6 +570,7 @@ if __name__ == "__main__":
     parser.add_argument('-mode', type=str, choices=['aa','cg','pdb','short','shortest'], default='aa', help='mapping specification format')
     parser.add_argument('-params', nargs='+', help = 'files specifying mappings. If more than one, can collate together into a system.')
     parser.add_argument('-stride', default=1, type=int, help='stride for processing trajectory')
+    parser.add_argument('-skip', default=0, type=int, help='stride for processing trajectory')
     args = parser.parse_args()
 
     print(args.top)
@@ -600,7 +601,8 @@ if __name__ == "__main__":
     elif args.style == 'system':
         #Note for simplicity the 'system' style does not take a mode specification. Only uses .pdb mappings or aa_indices_in_cg mappings.
         if args.top is None:
-            t = mdtraj.load(args.traj, stride=args.stride)
+            t = mdtraj.load(args.traj)
+            #t = mdtraj.load(args.traj, stride=args.stride)
         else:
             if isinstance(args.top,list) and len(args.top)==2:
               import pandas
@@ -610,8 +612,10 @@ if __name__ == "__main__":
               top = top_mdtraj
             else:
               top = args.top[0]
-            t = mdtraj.load( args.traj, top=top, stride=args.stride )
-    
+            t = mdtraj.load( args.traj, top=top )
+            #t = mdtraj.load( args.traj, top=top, stride=args.stride )
+        t = t[args.skip::args.stride]
+
         if len( args.params ) == 1:
             print('1 system parameter file received, assume contains system information')
             filemap = args.params[0]
