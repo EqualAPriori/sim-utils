@@ -348,16 +348,19 @@ def generate_input(topdef, ffdef, settings):
   print('\n===== DEFINING CELL =====')
   tmp['Model1']['Cell'] = OrderedDict()
   box = parse2list(settings['Cell']['CellLengths'])
+  settings['Cell']['CellLenths'] = box
   box_dim = len(box)
   npw = parse2list(settings['Cell']['NPW'])
   if len(npw) != box_dim:
     raise ValueError('dimensions of NPW {} incommensurate with box {}'.format(npw,box))
   if 'CellAngles' in settings['Cell']:
     cell_angles = parse2list(settings['Cell']['CellAngles'])
-    if len(cell_angles) != box_dim:
-      raise ValueError('Cell Angles {} incommensurate with box {}'.format(cell_angles,box))
+    settings['Cell']['CellAngles'] = cell_angles
+    #if len(cell_angles) != box_dim:
+    #  raise ValueError('Cell Angles {} incommensurate with box {}'.format(cell_angles,box))
   else:
     cell_angles = [90.] * box_dim
+    settings['Cell']['CellAngles'] = cell_angles
 
   update(tmp['Model1']['Cell'],settings['Cell'],'Dim',default=box_dim)
   update(tmp['Model1']['Cell'],settings['Cell'],'CellScaling',default=1.0)
@@ -415,8 +418,12 @@ def generate_input(topdef, ffdef, settings):
         #print(p)
         num_new_defs = np.zeros([n_bead_types,n_bead_types])
         for sp1 in p['species'][0]:
+          if sp1 not in beadID:
+            continue
           ind1 = beadID[sp1]-1
           for sp2 in p['species'][1]:
+            if sp2 not in beadID:
+              continue
             ind2 = beadID[sp2]-1
             if p['Epsilon']['val'] != 0:
               raise NotImplementedError('... non-zero LJ epsilon detected in potential {}, not supported'.format(p))
@@ -602,8 +609,8 @@ def generate_input(topdef, ffdef, settings):
   #first calculate what expected CChainDensity, volfracs are if using box and system topology
   precision = settings['Composition'].get('Precision',10)
   beadfracs = chain_beadfrac + smallmol_beadfrac #first group together
-  beadfracs = [np.round(f,decimals=precision+1) for f in beadfracs]
-  beadfracs[-1] = np.round(1.0-sum(beadfracs[:-1]),decimals=precision+1) #adjust to ensure sums to one, arbitrarily choose last species
+  beadfracs = [np.round(f,decimals=precision) for f in beadfracs]
+  beadfracs[-1] = np.round(1.0-sum(beadfracs[:-1]),decimals=precision) #adjust to ensure sums to one, arbitrarily choose last species
   chain_beadfrac = [ float(f) for ii,f in enumerate(beadfracs) if ii < len(chain_beadfrac) ]
   smallmol_beadfrac = [ float(f) for ii,f in enumerate(beadfracs) if ii >= len(chain_beadfrac) ]
   #TODO: need to adjust for charge neutrality
@@ -626,7 +633,7 @@ def generate_input(topdef, ffdef, settings):
         V = float(_refbox[0])
       else:
         raise ValueError('reference box for calculating CChain Density should have dimension 3, or 1 (if just Volume)')
-    CC = float(np.round(total_beadnum/V, decimals=precision+1))
+    CC = float(np.round(total_beadnum/V, decimals=precision))
     print('... {}'.format(CC))
   if tmp['Model1']['Composition']['Ensemble'].lower() == 'canonical':
     tmp['Model1']['Composition']['CChainDensity'] = CC
@@ -679,6 +686,7 @@ def generate_input(topdef, ffdef, settings):
   print('\n===== DEFINING SIMULATION PARAMETERS =====')
   spec['Simulation'] = OrderedDict()
   lambda_force = parse2list(settings['Simulation']['LambdaForceScale'])
+  settings['Simulation']['LambdaForceScale'] = lambda_force
   if len(lambda_force) < n_bead_types:
     print('CAUTION: lambda_force {} underspecified for {} bead types'.format(lambda_force,n_bead_types))
   if len(lambda_force) > n_bead_types:
@@ -813,10 +821,203 @@ def test_minimal():
 # OTHER TODOs:
 # Run system
 
-# doing simple substitutions
+### doing simple substitutions
 # fill in later; temporary work-around is to use the generated yaml file, which can be easily written out in pfts format! Maybe more verbose, but also more intuitive and direct, without messing with regexp, can easily add new sections, etc.
+# i.e. functions to manage an input script, and all the different sections
+
+def setkey(d,key,val,remove=False):
+  if val is not None:
+    d[key] = val
+  if remove and val is None:
+    d.pop(key,None)
+
+def set_cell(spec,Ls=None,CellScaling=None,CellAngles=None,NPW=None,SpaceGroup=None,CenterToPrimitive=None,Symmetrize=None,remove=False):
+  '''
+  remove : bool
+    whether or not to remove fields that have "None"
+  '''
+  subdict = spec['Models']['Model1']['Cell']
+  if Ls is not None:
+    if isinstance(Ls,(float,int)):
+      Dim = 1
+    elif isinstance(Ls,(tuple,list,np.array)):
+      Dim = len(Ls)
+    else:
+      Dim = subdict['Dim']
+  else:
+    Dim = subdict['Dim']
+
+  setkey(subdict,'Dim',Dim,remove=False)
+  setkey(subdict,'CellScaling',CellScaling,remove=remove)
+  setkey(subdict,'CellLengths',Ls,remove=False)
+  setkey(subdict,'CellAngles',CellAngles,remove=remove)
+  setkey(subdict,'NPW',NPW,remove=False)
+  setkey(subdict,'SpaceGroupName',SpaceGroup,remove=remove)
+  setkey(subdict,'CenterToPrimitiveCell',CenterToPrimitive,remove=remove)
+  if isinstance(Symmetrize,str) and Symmetrize.lower() == 'on':
+    Symmetrize = 'on'
+  elif isinstance(Symmetrize,bool) and Symmetrize:
+    Symmetrize = 'on'
+  elif Symmetrize is not None:
+    Symmetrize = 'off'
+  setkey(subdict,'Symmetrize',Symmetrize,remove)
+
+def set1d(spec,L=None,NPW=None):
+  if L is not None and not isinstance(L,(float,int)) and len(L)!=1:
+    raise ValueError('1d system must have box L be one dimension instead of {}'.format(L))
+  set_cell(spec,Ls=[1.0],CellScaling=L,CellAngles=[90.],NPW=NPW,
+      SpaceGroup=None,CenterToPrimitive=None,Symmetrize=None,remove=True)
+
+def set2d(spec,Ls=None,NPWs=None,Angle=90.,HEX=True,Symmetrize=False):
+  if Ls is not None:
+    if isinstance(Ls,(float,int)) or len(Ls)!=2:
+      raise ValueError('2d system must have box L be 2d instead of {}'.format(Ls))
+  if isinstance(NPWs,(int,float)):
+    NPWs = [int(NPWs)]*2
+  if HEX:
+    Angle = 120.
+    SpaceGroup = 'p6mm'
+    CenterToPrimitive = True
+  else:
+    Angle = 90.
+    SpaceGroup = None
+    CenterToPrimitive = None
+    Symmetrize = None
+  set_cell(spec,Ls,1.0,Angle,NPWs,SpaceGroup,CenterToPrimitive,Symmetrize,remove=True)
+
+def set3d(spec,Ls=None,NPWs=None,Angles=None,SpaceGroup=None,Symmetrize=False):
+  """still incomplete logic, i.e. sometimes want to override, sometimes dont...
+  safest is to always specify SpaceGroupName, which will then update angles accordingly"""
+  if Ls is not None:
+    if isinstance(Ls,(float,int)) or len(Ls)!=3:
+      raise ValueError('3d system must have box L be 3d instead of {}'.format(Ls))
+  if isinstance(NPWs,(int,float)):
+    NPWs = [int(NPWs)]*3
+  if SpaceGroup is not None:
+    Angles = [90.,90.,90.]# will be overriden by CenterToPrimitive anyway
+    CenterToPrimitive = True
+  else:
+    CenterToPrimitive = False
+  remove = False
+  if SpaceGroup is False:
+    SpaceGroup = None
+    CenterToPrimitive = None 
+    Symmetrize = None
+    remove = True
+
+  set_cell(spec,Ls,1.0,Angles,NPWs,SpaceGroup,CenterToPrimitive,Symmetrize,remove=remove)
 
 
+# and some setters that don't do any validation, relies on getting right key name:
+# no key removals, need to set everything correctly!!!
+def set_cell_simple(spec,**kwargs):
+  subdict = spec['Models']['Model1']['Cell'] 
+  for key in kwargs:
+    update(subdict,kwargs,key)
 
+def set_operators(spec,**kwargs):
+  subdict = spec['Models']['Model1']['Operators'] 
+  for key in kwargs:
+    update(subdict,kwargs,key)
 
+def set_composition(spec,**kwargs):
+  subdict = spec['Models']['Model1']['Composition'] 
+  if 'ChainVolFrac' in kwargs:
+    chvol = kwargs['ChainVolFrac']
+  else:
+    chvol = subdict.get('ChainVolFrac',[])
+  if 'SmallMoleculeVolFrac' in kwargs:
+    smvol = kwargs['SmallMoleculeVolFrac']
+  else:
+    smvol = subdict.get('SmallMoleculeVolFrac',[])
+  precision = 10
 
+  chaindefs = [ val for key,val in spec['Models']['Chains'].items() if key.startswith('Chain') ]
+  if len(chvol) != len(chaindefs): 
+    raise ValueError('input chain vol frac {} has diff. # species than defined')
+  smdefs = [ val for key,val in spec['Models']['SmallMolecules'].items() if key.startswith('SmallMolecule') ]
+  if len(chvol) != len(chaindefs): 
+    raise ValueError('input smallmol vol frac {} has diff. # species than defined')
+  charges = spec['Models']['Monomers'].get('Charge',None)
+ 
+  bead_nums = []
+  for chdef in chaindefs:
+    bead_num = chdef['NPerBlock']
+    bead_nums.append( sum(bead_num) )
+  for smdef in smdefs:
+    bead_nums.append(1)
+  nmoltypes = len(chaindefs) + len(smdefs)
+  bead_fracs = chvol + smvol
+  for ii in range(nmoltypes): #now every beadfrac is a nice multiple of 1/10**precision/Nbead
+    bead_fracs[ii] = 10.**-precision * bead_nums[ii] * round( bead_fracs[ii]/10.**-precision/bead_nums[ii] )
+
+  mol_charges = None
+  if charges is not None:
+    print('bead fracs before adjusting charges: {}'.format(bead_fracs))
+    #adjust for charge neutrality. not fully general, can't handle all cases, where numbers are not easily expressed in decimal (e.g. chain charge frac of 1/3, 1/7)
+    #get chain species charges
+    ch_charges = []
+    sm_charges = []
+    for chdef in chaindefs:
+      bead_charges = [charges[ind-1] for ind in chdef['BlockSpecies']]
+      bead_num = chdef['NPerBlock']
+      charge_tuple = zip(bead_charges,bead_num)
+      netcharge = sum( [_chg*_n for _chg,_n in charge_tuple] )
+      ch_charges.append(netcharge)
+    for smdef in smdefs:
+      sm_charges.append( charges[smdef['Species']-1] )
+
+    mol_charges = ch_charges + sm_charges
+    charge_fracs = zip( bead_fracs, bead_nums, mol_charges )
+    charge_fracs = [ _vfrac*_chg/float(_bn) for _vfrac,_bn,_chg in charge_fracs ]
+
+    #now adjust charges for neutrality: adjust amount of the last charged species w/ nonzero beadfrac
+    adjustindex = None
+    print(charge_fracs)
+    for revindex in range(1,nmoltypes+1):
+      if charge_fracs[-revindex] != 0.0:
+        adjustindex = nmoltypes - revindex
+        break
+    if adjustindex != None: 
+      othercharges = sum( charge_fracs[:adjustindex] )
+      charge_fracs[adjustindex] = - othercharges
+      bead_fracs[adjustindex] = round(charge_fracs[adjustindex]/mol_charges[adjustindex],precision)
+      print('adjusting charge fraction with index {}'.format(adjustindex))
+    print('bead fracs after adjusting charges: {}'.format(bead_fracs))
+
+  #Adjust for incompressibility as needed, rely on neutral species
+  adjustindex = None
+  for revindex in range(1,nmoltypes+1):
+    if bead_fracs[-revindex] != 0.0:
+      if mol_charges is None or mol_charges[-revindex]==0.0:
+        adjustindex = nmoltypes - revindex
+        break
+  if adjustindex is not None:
+    print('adjusting total bead fraction with index {}'.format(adjustindex))
+    bead_fracs[adjustindex] = round(1.0 - sum([_bf for ii,_bf in enumerate(bead_fracs) if ii!=adjustindex]),precision)
+  print('bead fracs after adjusting total bead fraction: {}'.format(bead_fracs))
+
+  chvol = [ _bf for ii,_bf in enumerate(bead_fracs) if ii < len(chaindefs) ]
+  smvol = [ _bf for ii,_bf in enumerate(bead_fracs) if ii >= len(chaindefs) ]
+  if len(chvol) > 0:
+    kwargs['ChainVolFrac'] = chvol
+  if len(smvol) > 0:
+    kwargs['SmallMoleculeVolFrac'] = smvol
+
+  for key in kwargs:
+    update(subdict,kwargs,key)
+
+def set_init(spec,**kwargs):
+  subdict = spec['Models']['Model1']['InitFields'] 
+  for key in kwargs:
+    update(subdict,kwargs,key)
+
+def set_simulation(spec,**kwargs):
+  subdict = spec['Simulation'] 
+  for key in kwargs:
+    update(subdict,kwargs,key)
+
+def set_pll(spec,**kwargs):
+  subdict = spec['Parallel'] 
+  for key in kwargs:
+    update(subdict,kwargs,key)
