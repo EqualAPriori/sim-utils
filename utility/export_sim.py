@@ -404,6 +404,44 @@ def set_params_from_file(force_field, ff_file):
   print('... Setting FF with file {} ...\n{}'.format(ff_file,s))
   force_field.SetParamString(s)      
 
+def update_ffdef_from_paramstring( ffdef, ff_string ):
+  ''' Update our custom forcefield definition object
+  Parameters
+  ----------
+  ffdef : the highest-level ffdef object
+  ff_string : string. if has '>>> POTENTIAL', parse directly; otherwise read file
+
+  Notes:
+  ------
+  will update the ffdef.processed_file field
+  '''
+  import ast
+  outff = ffdef.processed_file
+  if '>>> POTENTIAL' in ff_string:
+    s = ff_string.strip()
+  else:
+    with open(ff_string,'r') as f:
+      s = f.read()
+      s = s.strip()
+
+  for dat in s.split(">>> POTENTIAL")[1:]:
+    ThisName = dat.split("\n")[0].strip()
+    ThisData = ast.literal_eval(dat[dat.index("\n")+1:].strip())
+    #skip globals
+    foundmatch = False
+    for fftypename,fftype in outff.items():
+      for p in fftype['params_sim']:
+        if p['name'] == ThisName:
+          foundmatch = True
+          print('found match for {} in ffdef, updating'.format(ThisName))
+          #print('found match for {} in ffdef, updating {} into {}'.format(ThisName,p,ThisData))
+          for k,v in ThisData.items():
+            p[k]['val'] = v
+
+    if not foundmatch:
+      print('did not find match for {} in the ffdef, skipping'.format(ThisName))
+
+
 def update_specific_params(force_field, params):
   """Update specific terms of an existing Sys.ForceField
   Parameters
