@@ -8,12 +8,21 @@
 # 1) conversions (units? or between file formats)
 # 6) running commands
 # 7) simple subsitutions of a script
+# 8) parse PFTS script into a dictionary?
+#     sequence of # --> list
+#     = --> :
+#     \n --> , (unless is last element of that dict)
+#     ignore comments
+#    can probably do line by line, "increment/decrement" dictionary level
 # 
 # Example:
 # - with a Sys constructed from ffdef, topdef, settings
 # - save/update the ffdef with Sys: 
 #   export_sim.save_params_to_dict( Sys.ForceField, ffdef.processed_file )
 #   ffdef.sim2md()
+#   can also save directly without the Sys object, via
+#     export_sim.update_ffdef_from_paramstring(ffdef,ffstringfile)
+
 # - write out
 #   ffdef.save(savename)
 #
@@ -22,7 +31,7 @@
 
 #import sys,os
 #import re,copy
-import context #makes sure we get the forcefield.py and optimize.py defined in utility instead of legacy versions in parent directory
+#import context #makes sure we get the forcefield.py and optimize.py defined in utility instead of legacy versions in parent directory
 import topologify,forcefield
 from collections import OrderedDict
 import yamlhelper as yaml
@@ -447,6 +456,7 @@ def generate_input(topdef, ffdef, settings):
         raise ValueError('... Kappas are not consistent with smearing model, ambiguous how to resolve')
       else:
         print('... Great! Kappas consistent with smearing length model.')
+        asmear = asmear.tolist()
       for mon_name,bead_id in beadID.items():
         MonPatches[mon_name]['Smearing'] = asmear[bead_id-1]
 
@@ -454,7 +464,7 @@ def generate_input(topdef, ffdef, settings):
       for ind1 in range(n_bead_types):
         for ind2 in range(ind1,n_bead_types):
           bexclvname = 'BExclVolume{}{}'.format(ind1+1,ind2+1)
-          tmp['Model1']['Interactions'][bexclvname] = Bfts[ind1,ind2]
+          tmp['Model1']['Interactions'][bexclvname] = float(Bfts[ind1,ind2])
 
     else:
       raise ValueError('... No excluded volume interactions defined, are you sure?')
@@ -468,7 +478,7 @@ def generate_input(topdef, ffdef, settings):
       Coefs = np.array(Coefs)
       coefs_same = np.isclose(Coefs,Coefs[0])
       if all(coefs_same):
-        tmp['Model1']['Interactions']['EElecStatic'] = Coefs[0]*4.0*np.pi * Nref**2.0 / Rgref
+        tmp['Model1']['Interactions']['EElecStatic'] = float(Coefs[0]*4.0*np.pi * Nref**2.0 / Rgref)
         print('... Coef {} --> EElecStatic {}'.format(Coefs[0], tmp['Model1']['Interactions']['EElecStatic']))
       else:
         raise ValueError('... charge coefficients {} in ffdef are not all the same!'.format(Coefs))
@@ -594,8 +604,8 @@ def generate_input(topdef, ffdef, settings):
   beadfracs = chain_beadfrac + smallmol_beadfrac #first group together
   beadfracs = [np.round(f,decimals=precision+1) for f in beadfracs]
   beadfracs[-1] = np.round(1.0-sum(beadfracs[:-1]),decimals=precision+1) #adjust to ensure sums to one, arbitrarily choose last species
-  chain_beadfrac = [ f for ii,f in enumerate(beadfracs) if ii < len(chain_beadfrac) ]
-  smallmol_beadfrac = [ f for ii,f in enumerate(beadfracs) if ii >= len(chain_beadfrac) ]
+  chain_beadfrac = [ float(f) for ii,f in enumerate(beadfracs) if ii < len(chain_beadfrac) ]
+  smallmol_beadfrac = [ float(f) for ii,f in enumerate(beadfracs) if ii >= len(chain_beadfrac) ]
   #TODO: need to adjust for charge neutrality
   #Get box volume. Precedence is CellLengths, then settings.Composition.Box
   CC = settings['Composition'].get('CChainDensity',None)
@@ -616,7 +626,7 @@ def generate_input(topdef, ffdef, settings):
         V = float(_refbox[0])
       else:
         raise ValueError('reference box for calculating CChain Density should have dimension 3, or 1 (if just Volume)')
-    CC = np.round(total_beadnum/V, decimals=precision+1)
+    CC = float(np.round(total_beadnum/V, decimals=precision+1))
     print('... {}'.format(CC))
   if tmp['Model1']['Composition']['Ensemble'].lower() == 'canonical':
     tmp['Model1']['Composition']['CChainDensity'] = CC
@@ -763,10 +773,21 @@ def dict_to_str(spec):
   return spec_string
 
 
-def write(filename,spec):
+def write(filename,spec,header=None):
+  import os
+  from datetime import datetime
+  prefix,extension = os.path.splitext(filename)
+  heading = 'Initially generated {}'.format(datetime.now())
+  if header is None:
+    header = heading
+  else:
+    header = '{}; {}'.format(heading,header)
   if not isinstance(spec,str):
+    #should be a dict
+    yaml.save_dict(prefix+'.yaml', spec, header=header)
     spec = dict_to_str(spec)
   with open(filename,'w') as f:
+    f.write('#{}\n'.format(header))
     f.write(spec)
     f.write('\n') #for some reason, pfts needs extra linebreak in order to parse correctly...
 
@@ -793,6 +814,8 @@ def test_minimal():
 # Run system
 
 # doing simple substitutions
+# fill in later; temporary work-around is to use the generated yaml file, which can be easily written out in pfts format! Maybe more verbose, but also more intuitive and direct, without messing with regexp, can easily add new sections, etc.
+
 
 
 
