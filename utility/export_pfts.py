@@ -96,7 +96,28 @@ def parse2list(s):
   elif isinstance(s,(int,float,bool)):
     return [s]
   else:
-    return s.split()
+    tmp = s.split()
+    result = []
+    for entry in tmp:
+      if s.lower() in ['true']:
+        result.append(True)
+      elif s.lower() in ['false']:
+        result.append(False)
+      else:
+        try: 
+          x = int(entry)
+          result.append(x)
+          continue
+        except:
+          pass
+        try:
+          x = float(entry)
+          result.append(x)
+          continue
+        except:
+          pass
+        result.append(entry)
+    return result
 
 def validate_moltype(bead_types,beads,bonds,name=None):
   """
@@ -156,6 +177,159 @@ def update(dict1,dict2,key,default=None,fill=True,mandatory=False):
     dict1[key] = dict2.get(key,default)
   elif not fill and key in dict2 and not mandatory: #not mandatory to have key in dict2, not necessary to keep in dict1
     dict1[key] = dict2[key]
+
+## loading a PFTS-type input
+# 8) parse PFTS script into a dictionary?
+#     sequence of # --> list
+#     = --> :
+#     \n --> , (unless is last element of that dict)
+#     ignore comments
+#    can probably do line by line, "increment/decrement" dictionary level
+#
+def parseline(line):
+  tmp = line.strip().split('#')
+  content=tmp[0]
+  comments='#'.join(tmp[1:]) #later can think about putting comments back
+  return content
+
+def getname(name):
+  namemaps = {'inputfileversion':'InputFileVersion', 
+      'nummodels':'NumModels','modeltype':'ModelType',
+      'monomers':'Monomers','nspecies':'NSpecies','charge':'Charge',
+      'kuhnlen':'KuhnLen','gausssmearwidth':'GaussSmearWidth',
+      'chain':'Chain','nchains':'NChains','diffusermethod':'DiffuserMethod','contourds':'Contourds',
+      'polymerreferencen':'PolymerReferenceN','label':'Label','architecture':'Architecture',
+      'statistics':'Statistics','nblocks':'NBlocks','nbeads':'NBeads',
+      'blockspecies':'BlockSpecies','nperblock':'NPerBlock',
+      'smallmolecules':'SmallMolecules','nsmallmoleculetypes':'NSmallMoleculeTypes',
+      'species':'Species',
+      'cell':'Cell','cellscaling':'CellScaling','celllengths':'CellLengths',
+      'cellangles':'CellAngles','npw':'NPW','spacegroupname':'SpaceGroupName',
+      'centertoprimitivecell':'CenterToPrimitiveCell','symmetrize':'Symmetrize',
+      'interactions':'Interactions','applycompressibilityconstraint':'ApplyCompressibilityConstraint',
+      'eelecstatic':'EElecStatic','inversezetan':'InverseZetaN',
+      'composition':'Composition','ensemble':'Ensemble','cchaindensity':'CChainDensity',
+      'chainvolfrac':'ChainVolFrac','smallmoleculevolfrac':'SmallMoleculeVolFrac',
+      'chainactivity':'ChainActivity','smallmoleculeactivity':'SmallMoleculeActivity',
+      'operators':'Operators','calchamiltonian':'CalcHamiltonian','calcpressure':'CalcPressure',
+      'calcstresstensor':'CalcStressTensor','calcchemicalpotential':'CalcChemicalPotential',
+      'calcdensityoperator':'CalcDensityOperator','includeidealgasterms':'IncludeIdealGasTerms',
+      'calcstructurefactor':'CalcStructureFactor','calcorientationcorrelator':'CalcOrientationCorrelator',
+      'orientationcorr_spatialaveragerange':'OrientationCorr_SpatialAverageRange',
+      'initfields':'InitFields','readinputfields':'ReadInputFields','inputfieldsfile':'InputFieldsFile',
+      'inittype':'InitType','initparameters':'InitParameters',
+      'simulation':'Simulation','jobtype':'JobType','fieldupdater':'FieldUpdater','timestepdt':'TimeStepDT',
+      'lambdaforcescale':'LambdaForceScale','scftforcestoppingtol':'SCFTForceStoppingTol',
+      'variablecell':'VariableCell','lambdastressscale':'LambdaStressScale',
+      'scftstressstoppingtol':'SCFTStressStoppingTol','numtimestepsperblock':'NumTimeStepsPerBlock',
+      'numblocks':'NumBlocks','io':'IO','outputfields':'OutputFields','fieldoutputspace':'FieldOutputSpace',
+      'parallel':'Parallel','cuda_selectdevice':'CUDA_SelectDevice',
+      'cuda_threadblocksize':'CUDA_ThreadBlockSize','openmp_nthreads':'OpenMP_NThreads'}
+  keys = list(namemaps.keys())
+  extranames = {'model':'Model','chain':'Chain','smallmolecule':'SmallMolecule',
+      'chi':'Chi','bexclvolume':'BExclVolume','initfield':'InitField'}
+  foundkey = False
+  name = name.strip()
+  #if not foundkey:
+  #  for k in keys:
+  #    if k.lower() == name.lower():
+  #      foundkey = True
+  #      return namemaps[name.lower()]
+  if name.lower() in namemaps:
+    foundkey = True
+    return namemaps[name.lower()]
+  else:
+    for k in extranames:
+      if name.lower().startswith(k):
+        suffix = name.lower().split(k)[1]
+        foundkey = True
+        return extranames[k] + suffix
+  if not foundkey: #unrecognized option
+    print('unrecognized field name: {}'.format(name))
+    return name
+
+def load(fname):
+  spec = OrderedDict()
+  levels = [spec]
+  with open(fname,'r') as f:
+    l = f.readline()
+    while l:
+      if '{' in l: #start a new dictionary entry
+        name = l.strip().split('{')[0]
+        name = getname(name) #standardized format
+        levels[-1][name] = OrderedDict()
+        levels.append(levels[-1][name])
+      if '}' in l: #end current dictionary entry
+        levels.pop()
+      elif '=' in l:
+        name,entry = l.strip().split('=') #if line has more than one equal sign, is a problem!
+        name = getname(name)
+        entry = parse2list(entry) #TODO: if list of numbers, cast from string to int/float as appropriate
+        levels[-1][name] = entry
+      l = f.readline()
+  print('ending levels: {}'.format(levels))
+  #print(len(levels))
+  return paramdict(spec)
+
+class paramdict(OrderedDict):
+  '''To enable lazy, case-insensitive access'''
+  def iget(self,key):
+    res = list(self.nested_lookup(self,key))
+    if len(res) == 0:
+      raise KeyError(key)
+    if len(res) == 1:
+      return res[0][0][res[0][1]]
+    if len(res) > 1:
+      print('Multiple ({}) entries found!'.format(len(res),res))
+      extractedresults = [ r[0][r[1]] for r in res ] #unsure if this is what I want for output. more succinct, but less usable 
+      return res
+  def iset(self,key,val,setall=False):
+    res = list(self.nested_lookup(self,key))
+    if len(res) == 0:
+      self[key] = val
+    if len(res) == 1:
+      res[0][0][res[0][1]] = val
+    if len(res) > 1:
+      if setall:
+        print('chose to overwrite multiple ({}) entries found'.format(len(res)))
+        for r in res:
+          r[0][r[1]] = val
+      else:
+        raise KeyError('Multiple ({}) entries found, unclear which to set: {}'.format(len(res),res))
+
+  @staticmethod
+  #returns recursively subnested values
+  #see gen_dict_extract from
+  def nested_lookup(d,key): 
+    '''
+    may be slow for large dicts: nested, and in py2.7 creates full lists instead of using iterators when iterating.
+    '''
+    if hasattr(d,'iteritems'):
+      for k,v in d.items():
+        if k.lower() == key.lower():
+          #print('found {}'.format(d))
+          yield (d,k)
+        if isinstance(v, dict):
+          for result in paramdict.nested_lookup(v,key):
+            yield result
+        elif isinstance(v, (list,tuple)):
+          for e in v:
+            for result in paramdict.nested_lookup(e,key):
+              yield result
+
+def gen_dict_extract(var,key):
+  if hasattr(var,'iteritems'):
+    for k, v in var.iteritems():
+      if k.lower() == key.lower():
+        print(var)
+        yield (var,k)
+      if isinstance(v, dict):
+        for result in gen_dict_extract(v,key):
+          yield result
+      elif isinstance(v, (list,tuple)):
+        for d in v:
+          for result in gen_dict_extract(d,key):
+            yield result
 
 
 ## Set up force field
@@ -305,7 +479,7 @@ def generate_input(topdef, ffdef, settings):
     else:
       chains[mol_name] = mol_def
   
-  tmp['Chains'] = OrderedDict([('NChains',len(chains)), ('Countords',1), ('DiffuserMethod','SOS'), ('PolymerReferenceN',Nref)])
+  tmp['Chains'] = OrderedDict([('NChains',len(chains)), ('Contourds',1), ('DiffuserMethod','SOS'), ('PolymerReferenceN',Nref)])
   for ic,(mol_name,mol_def) in enumerate(chains.items()):
     chainid = 'Chain{}'.format(ic+1)
     nblocks = len(mol_def['def'])
@@ -328,7 +502,7 @@ def generate_input(topdef, ffdef, settings):
                     ]
     tmp['Chains'][chainid] = OrderedDict( chain_pftsdef )
 
-  tmp['SmallMolecules'] = OrderedDict({'nSmallMoleculeTypes':len(smallmols)})
+  tmp['SmallMolecules'] = OrderedDict({'NSmallMoleculeTypes':len(smallmols)})
   for ic,(mol_name,mol_def) in enumerate(smallmols.items()):
     smallmolid = 'SmallMolecule{}'.format(ic+1)
     beadtype = mol_def['beads'][0]
@@ -744,7 +918,7 @@ def generate_input(topdef, ffdef, settings):
   #spec['Parallel']['OpenMP_nthreads'] = pll_settings.get('OpenMP_NThreads',8)
 
   ### final
-  return spec
+  return paramdict(spec)
 
 
 def dict_to_str(spec):
