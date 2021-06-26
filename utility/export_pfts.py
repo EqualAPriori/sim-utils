@@ -90,7 +90,7 @@ def strsimple(mylist,nspaces=1):
     return (nspaces*' ').join(str(x) for x in mylist)
 
 def parse2list(s):
-  '''assumes flat list. does not handle some of the nexted syntax that parsify module defines'''
+  '''assumes flat list. does not handle some of the nested syntax that parsify module defines'''
   if isinstance(s,(list,tuple)):
     return s
   elif isinstance(s,(int,float,bool)):
@@ -99,9 +99,9 @@ def parse2list(s):
     tmp = s.split()
     result = []
     for entry in tmp:
-      if s.lower() in ['true']:
+      if entry.lower() in ['true']:
         result.append(True)
-      elif s.lower() in ['false']:
+      elif entry.lower() in ['false']:
         result.append(False)
       else:
         try: 
@@ -189,7 +189,8 @@ def update(dict1,dict2,key,default=None,fill=True,mandatory=False):
 def parseline(line):
   tmp = line.strip().split('#')
   content=tmp[0]
-  comments='#'.join(tmp[1:]) #later can think about putting comments back
+  if len(tmp) > 1:
+    comments='#'.join(tmp[1:]) #later can think about putting comments back
   return content
 
 def getname(name):
@@ -203,6 +204,7 @@ def getname(name):
       'blockspecies':'BlockSpecies','nperblock':'NPerBlock',
       'smallmolecules':'SmallMolecules','nsmallmoleculetypes':'NSmallMoleculeTypes',
       'species':'Species',
+      'dim':'Dim',
       'cell':'Cell','cellscaling':'CellScaling','celllengths':'CellLengths',
       'cellangles':'CellAngles','npw':'NPW','spacegroupname':'SpaceGroupName',
       'centertoprimitivecell':'CenterToPrimitiveCell','symmetrize':'Symmetrize',
@@ -218,7 +220,7 @@ def getname(name):
       'orientationcorr_spatialaveragerange':'OrientationCorr_SpatialAverageRange',
       'initfields':'InitFields','readinputfields':'ReadInputFields','inputfieldsfile':'InputFieldsFile',
       'inittype':'InitType','initparameters':'InitParameters',
-      'simulation':'Simulation','jobtype':'JobType','fieldupdater':'FieldUpdater','timestepdt':'TimeStepDT',
+      'simulation':'Simulation','jobtype':'JobType','fieldupdater':'FieldUpdater','cellupdater':'CellUpdater','timestepdt':'TimeStepDT',
       'lambdaforcescale':'LambdaForceScale','scftforcestoppingtol':'SCFTForceStoppingTol',
       'variablecell':'VariableCell','lambdastressscale':'LambdaStressScale',
       'scftstressstoppingtol':'SCFTStressStoppingTol','numtimestepsperblock':'NumTimeStepsPerBlock',
@@ -249,11 +251,13 @@ def getname(name):
     return name
 
 def load(fname):
+  '''Load PFTS-type input'''
   spec = OrderedDict()
   levels = [spec]
   with open(fname,'r') as f:
     l = f.readline()
     while l:
+      l = parseline(l)
       if '{' in l: #start a new dictionary entry
         name = l.strip().split('{')[0]
         name = getname(name) #standardized format
@@ -265,9 +269,11 @@ def load(fname):
         name,entry = l.strip().split('=') #if line has more than one equal sign, is a problem!
         name = getname(name)
         entry = parse2list(entry) #TODO: if list of numbers, cast from string to int/float as appropriate
+        if len(entry) == 1:
+          entry = entry[0]
         levels[-1][name] = entry
       l = f.readline()
-  print('ending levels: {}'.format(levels))
+  #print('ending levels: {}'.format(levels))
   #print(len(levels))
   return paramdict(spec)
 
@@ -439,8 +445,11 @@ def generate_input(topdef, ffdef, settings):
     topdef = topologify.Topology(topdef)
   if isinstance(ffdef,str):
     ffdef = forcefield.ForceField(ffdef)
-  if isinstance(settings,str):
+  if isinstance(settings,str) and settings.endswith('yaml'):
     settings = yaml.load(settings)
+  elif isinstance(settings,str) and settings.endswith('in'): #pfts format
+    settings = load(settings)
+
 
   processed_top = preprocess_topology(topdef) 
   n_bead_types = len(processed_top['beads'])
@@ -867,6 +876,7 @@ def generate_input(topdef, ffdef, settings):
     print('CAUTION: lambda_force {} overspecified for {} bead types'.format(lambda_force,n_bead_types))
   update(spec['Simulation'],settings['Simulation'],'JobType',mandatory=True)
   update(spec['Simulation'],settings['Simulation'],'FieldUpdater',mandatory=True)
+  update(spec['Simulation'],settings['Simulation'],'CellUpdater',default='Broyden')
   update(spec['Simulation'],settings['Simulation'],'TimeStepDT',mandatory=True)
   update(spec['Simulation'],settings['Simulation'],'LambdaForceScale',mandatory=True)
   update(spec['Simulation'],settings['Simulation'],'SCFTForceStoppingTol',default=1.0e-4)
@@ -966,6 +976,8 @@ def write(filename,spec,header=None):
     header = '{}; {}'.format(heading,header)
   if not isinstance(spec,str):
     #should be a dict
+    if isinstance(spec,paramdict):
+      spec = OrderedDict(spec)
     yaml.save_dict(prefix+'.yaml', spec, header=header)
     spec = dict_to_str(spec)
   with open(filename,'w') as f:
@@ -1195,3 +1207,13 @@ def set_pll(spec,**kwargs):
   subdict = spec['Parallel'] 
   for key in kwargs:
     update(subdict,kwargs,key)
+
+# ===== Helper functions for analysis, managing runs =====
+# with open('./z.log','w') as f: subprocess.call(['/home/kshen/mylib/polyfts/bin/Release/PolyFTS.x','input.in'],stdout=f)
+
+#def make_sim
+
+
+
+
+
