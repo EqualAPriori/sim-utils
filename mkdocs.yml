@@ -1,1 +1,4 @@
 site_name: Sim-Utils
+nav:
+   - 'index.md'
+   - 'help.md'
