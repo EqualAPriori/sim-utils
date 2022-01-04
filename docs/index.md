@@ -14,3 +14,5 @@ We will cover:
 5. Converting a coarse-grained system into a field theory simulation
 6. Running field theory: constructing a phase diagram
 
+
+new text
