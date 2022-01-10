@@ -1,19 +1,18 @@
 # Welcome to Sim-Utils
 
+A full stack set of tools for a full AA->field theory workflow!
+This enables the study of systems from the Angstrom (chemical) scale to micrometer scale.
+
 ![bioscout](imgs/biomaterials-scout.png)
 
-Documenting wrappers for implementing a full AA->field theory workflow
-
-## Contents
+# Contents
 We will cover:
 
-1. Creating a system
-    1. Creating molecule structures
-    2. Creating system structures and topologies
-2. Setting up a force field
-3. Getting started with OpenMM
-4. Coarse-Graining a System
-5. Converting a coarse-grained system into a field theory simulation
-6. Running field theory: constructing a phase diagram
-7. Consider an [introduction](intro.ipynb)
+1. [Setting up particle simulations](md/index.md)
+2. [Coarse graining](cg/index.md)
+3. Running [field theory](fieldtheory/index.md)
+4. [Case studies](casestudies/index.md)
+
+# Deprecated
+1. Consider an [introduction](intro.ipynb)
 
