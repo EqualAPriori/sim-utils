@@ -1,6 +1,6 @@
 # Welcome to Sim-Utils
 
-![bioscout]('imgs/biomaterials-scout.png')
+![bioscout](imgs/biomaterials-scout.png)
 
 Documenting wrappers for implementing a full AA->field theory workflow
 
