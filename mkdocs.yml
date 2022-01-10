@@ -3,6 +3,10 @@ theme:
   name: material
 nav:
   - 'index.md'
+  - MD: 'md'
+  - CG: 'cg'
+  - Field Theory: 'fieldtheory'
+  - Case Studies: 'casestudies'
   - 'help.md'
 plugins:
   - mkdocs-jupyter
