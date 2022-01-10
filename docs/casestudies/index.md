@@ -7,4 +7,4 @@ A full-stack coarse graining of a surfactant system is highly multicomponent, an
 - water-salt
 - dodecane
 - dodecane-water
-- SDS
+- [SDS](SDS/run.ipynb)
