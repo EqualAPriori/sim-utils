@@ -1,3 +1,8 @@
 site_name: Sim-Utils
+theme:
+  name: material
+nav:
+  - 'index.md'
+  - 'help.md'
 plugins:
   - mkdocs-jupyter
