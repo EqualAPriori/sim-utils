@@ -13,4 +13,19 @@ The case study also builds off of [water](../water/index.md), [dodecane](../dode
 
 (The bounding boxes above outline the dodecane region sandwiched between two SDS interfacial layers.)
 
-See the [jupyter notebook](SDS.ipynb) implementing this in coarse graining.
+Code can be found in the [repository](https://github.com/EqualAPriori/sim-utils/tree/scout/docs/tutorials/SDS). See the [jupyter notebook](SDS.ipynb) implementing this in coarse graining. The main new feature being done is the addition of a surface area constraint:
+
+```python
+Az = sim.measure.Az(Sys0,axis=2)
+Az_target = 18.8556366
+Sys0.Measures.append(Az)
+Opt0.MinReweightFrac = 0.25
+StageCoefsA = [100.0,100.0]
+UDist0 = Opt0.AddPenalty(Az, Az_target, MeasureScale = 1., Coef=1.e-80)
+```
+
+To run with the constraints, the optimization command is now:
+
+```python
+Opt0.RunStages(StageCoefs = StageCoefsA, LagMult0=10.0)
+```

@@ -1,0 +1,5 @@
+MODEL        0
+ATOM      1 W    HOH A   0       0.000   0.060   0.000  1.00  0.00          VS
+TER       2      HOH A   0
+ENDMDL
+END

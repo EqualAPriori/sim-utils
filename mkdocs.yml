@@ -11,9 +11,9 @@ nav:
   - 'index.md'
   - Theory: "theory/index.md"
   - Installation: 'logistics.md'
-  - Case Studies: 'tutorials/index.md'
   - Best Practices: "tutorials/bestpractices.md"
-  #- Running Simulations: "simulations.md"
+  - Case Studies: 'tutorials/index.md'
+  - Running Simulations: "simulations.md"
   - References: 'publications.md'
   #- API reference
   #- Misc (how to edit these pages):

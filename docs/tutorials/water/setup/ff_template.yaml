@@ -1,0 +1,15 @@
+# Example yaml force field definition 
+---
+pair_ljg:
+  defaults_sim: #used only by sim
+    B: 0.0 True
+    Kappa: 1.0 True
+    Dist0: 0.0 True
+    Cut: 1.553705
+    a_smear: #For now, behavior is to default Kappa, but not pre-given Kappas
+      W: 0.310741
+
+  params_sim: # B*exp(-kappa*(r-Dist0)) + 4 Epsilon ( (Sigma/r)^12 - (Sigma/r)^6 )
+    - W W  B;0.4;False
+
+

@@ -10,4 +10,5 @@ And it assumes that water interactions have already been derived following previ
 
 As outlined in the [theoretical considerations]("bestpractices.md"), coarse graining a mixture takes some care in choosing a coarse graining ensemble. To this end, we use the [external potential ensemble](https://aip.scitation.org/doi/full/10.1063/5.0022808), easily implemented by applying a sinusoidal potential to one of the species (in this case, water) to force a density response.
 
-The [methanol-water](methanol_water.ipynb) notebook introduces how to obtain thermodynamically faithful coarse grained methanol-water interactions using the [external potential ensemble](https://aip.scitation.org/doi/full/10.1063/5.0022808).
+Code can be found in the [repository](https://github.com/EqualAPriori/sim-utils/tree/scout/docs/tutorials/methanol_water). The [methanol-water](methanol_water.ipynb) notebook introduces how to obtain thermodynamically faithful coarse grained methanol-water interactions using the [external potential ensemble](https://aip.scitation.org/doi/full/10.1063/5.0022808).
+
