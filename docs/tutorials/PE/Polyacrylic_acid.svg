@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" width="832" height="627" viewBox="0 0 832 627"
+	xmlns="http://www.w3.org/2000/svg"
+	xmlns:xlink="http://www.w3.org/1999/xlink"
+	xml:space="preserve">
+	<style type="text/css">
+		line, polyline{
+			fill: none;
+			stroke: #000;
+			stroke-width: 5;
+		}
+		polyline{
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			stroke-miterlimit: 10;
+		}
+		text{
+			font-size: 98px;
+			font-family: Helvetica, Arial, sans-serif;
+			text-anchor: middle;
+		}
+	</style>
+	<polyline points="129.5,17.6 92.6,17.6 92.6,608.5 129.5,608.5"/>
+	<polyline points="676.6,17.6 713.4,17.6 713.4,608.5 676.6,608.5"/>
+	<line x1="8.1"   y1="315.7" x2="283.1" y2="389.4" stroke-dasharray="29"/>
+	<line x1="824.2" y1="429.7" x2="474.8" y2="334.3" stroke-dasharray="27.5"/>
+	<g>
+		<line x1="356.1" y1="123.2" x2="394.6" y2="145"/>
+		<line x1="343.8" y1="144.9" x2="382.3" y2="168.7"/>
+	</g>
+	<line x1="472.4" y1="151.4" x2="507.5" y2="131.6"/>
+	<line x1="426"   y1="233.5" x2="426"   y2="272.5"/>
+	<line x1="346.1" y1="368.2" x2="385.3" y2="345.8"/>
+	<line x1="455.7" y1="371.9" x2="490.3" y2="432.7"/>
+	<line x1="275.4" y1="440.3" x2="254.7" y2="475.2"/>
+	<line x1="329.7" y1="445.3" x2="350.4" y2="480.2"/>
+	<text x="304.855" y="145.519">O</text>
+	<text x="430.453" y="216.519">C</text>
+	<text x="430.453" y="360.519">C</text>
+	<text x="305.717" y="432.681">C</text>
+	<text x="232.717" y="566.681">H</text>
+	<text x="382.717" y="564.681">H</text>
+	<text x="524.484" y="518.356">H</text>
+	<text x="590.852" y="145.519">OH</text>
+	<text x="775.761" y="592.885">n</text>
+</svg>
