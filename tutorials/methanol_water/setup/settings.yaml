@@ -1,0 +1,21 @@
+---
+sys_name: methanol-water
+
+neutralize: False
+box: #get from trajec
+
+temp: 1.
+barostat:
+  pressure: 283.951857
+  pressure_axis: 0
+  tension: null
+integrator:
+  dt: 0.01
+  langevin_gamma: 1.0
+
+run: #for omm, can chain into a protocol, have sequential runs
+  md_engine:  openmm
+  steps_equil: 10000
+  steps_prod: 20000
+  steps_stride: 200
+

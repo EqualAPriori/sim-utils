@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Case Studies - AA2FTS</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../css/theme.css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Case Studies";
+    var mkdocs_page_input_path = "tutorials/index.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/python.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> AA2FTS</a>
+        
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="..">Welcome to AA2FTS</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../theory/">Theory</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../logistics/">Installation</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="bestpractices/">Best Practices</a>
+                    </li>
+                </ul>
+                <ul class="current">
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">Case Studies</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#case-studies">Case Studies</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-bulk-water-nearly-incompressible-liquids">1. Bulk water: Nearly incompressible liquids</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-dodecane-understanding-bonding">2. Dodecane: Understanding bonding</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-methanol-water-mixtures">3. Methanol-Water: Mixtures</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#4-nacl-solution-incorporating-electrostatics">4. NaCl Solution: Incorporating electrostatics</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#5-sds-microstructure-forming-systems">5. SDS: Microstructure forming systems</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#6-peo-temperature-dependence-and-phase-separation">6. PEO: Temperature dependence and phase separation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#7-polyelectrolyte-systems-coacervation">7. Polyelectrolyte Systems: Coacervation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#8-biological-peptide-systems">8. Biological peptide systems</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../simulations/">Running Simulations</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../publications/">References</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">AA2FTS</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Case Studies</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="tutorials">Tutorials</h1>
+<p>This section is meant to be a running list of case studies and work based on this workflow, with short summaries of key lessons from each. These case studies with increasing complexity to demonstrate both the end-to-end simulation work flow.</p>
+<h2 id="case-studies">Case Studies</h2>
+<h3 id="1-bulk-water-nearly-incompressible-liquids">1. Bulk water: Nearly incompressible liquids</h3>
+<p>For example coarse graining, see this <a href="water/">pure water</a> page.</p>
+<h3 id="2-dodecane-understanding-bonding">2. Dodecane: Understanding bonding</h3>
+<p>For example coarse graining, see this <a href="dodecane/">dodecane</a> page.</p>
+<h3 id="3-methanol-water-mixtures">3. Methanol-Water: Mixtures</h3>
+<p>For example coarse graining, see this <a href="methanol_water/">methanol-water mixture</a> page.</p>
+<h3 id="4-nacl-solution-incorporating-electrostatics">4. NaCl Solution: Incorporating electrostatics</h3>
+<p>For example coarse graining, see this <a href="salt/">NaCl</a> page.</p>
+<h3 id="5-sds-microstructure-forming-systems">5. SDS: Microstructure forming systems</h3>
+<p>For example coarse graining, see this <a href="SDS/">SDS</a> page.</p>
+<h3 id="6-peo-temperature-dependence-and-phase-separation">6. PEO: Temperature dependence and phase separation</h3>
+<p>For example coarse graining, see this <a href="PEO/">PEO</a> page.</p>
+<h3 id="7-polyelectrolyte-systems-coacervation">7. Polyelectrolyte Systems: Coacervation</h3>
+<p>For a sample system, see this page studying <a href="PE/">polyacrylic acid (PAA) and poly-allyl-amine (PAH)</a>.</p>
+<h3 id="8-biological-peptide-systems">8. Biological peptide systems</h3>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../simulations/" class="btn btn-neutral float-right" title="Running Simulations">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="bestpractices/" class="btn btn-neutral" title="Best Practices"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="bestpractices/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../simulations/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../javascripts/mathjax.js" defer></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6" defer></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

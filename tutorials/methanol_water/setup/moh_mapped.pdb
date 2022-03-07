@@ -1,0 +1,5 @@
+MODEL        0
+ATOM      1 MOH  MOH A   0       0.000   0.060   0.000  1.00  0.00          VS
+TER       2      MOH A   0
+ENDMDL
+END

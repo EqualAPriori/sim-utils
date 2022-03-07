@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+  <title>NaCl - AA2FTS</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../../css/theme.css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "NaCl";
+    var mkdocs_page_input_path = "tutorials/salt/index.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/python.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> AA2FTS</a>
+        
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../..">Welcome to AA2FTS</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../theory/">Theory</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../logistics/">Installation</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../bestpractices/">Best Practices</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../">Case Studies</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../simulations/">Running Simulations</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../publications/">References</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">AA2FTS</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>NaCl</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="nacl">NaCl</h1>
+<p>A Nacl salt solution provides a quick case study of what it takes to include <a href="electrostatics.md">electrostatics</a> in a coarse grained model.</p>
+<p>This case study assumes one already has a coarse-grained <a href="../water/">water</a> model constructed. It then represents each ion as individual beads. For simplicity, the ion smearing radii are taken to be the same as that of water.</p>
+<p>The key is to use a smeared Coulombic interaction, with the Bjerrum length <span class="arithmatex">\(l_b\)</span> chosen to be the solvent's dielectric constant (at the desired temperature). For example, at room temperature the measured dielectric constant for water using the OPC water model is <span class="arithmatex">\(\varepsilon_r = 78.4\)</span>. This leads to:</p>
+<div class="arithmatex">\[l_b = \frac{e^2}{4\pi\varepsilon_0\varepsilon_r k_BT} \approx 0.715\text{nm}\]</div>
+<p>Theoretical details are discussed on the <a href="../electrostatics/">electrostatics theory</a> page, code and files can be found in the <a href="https://github.com/EqualAPriori/sim-utils/tree/scout/docs/tutorials/salt">repository</a> for all the files, and an example <a href="NaCl/">jupyter notebook</a> is also available. The novel feature is the addition of the smeared electrostatic potential. In the jupyter notebook this is set via the configuration files. To do it manually, one needs to first make sure that ion atom type definitions are defined with charges:</p>
+<pre><code class="language-python">Na_type = sim.chem.AtomType(&quot;Na&quot;, Mass=1.0, Charge = 1.0)
+Cl_type = sim.chem.AtomType(&quot;Cl&quot;, Mass=1.0, Charge =-1.0)
+</code></pre>
+<p>And subsequently, to add both the bare Coulomb correction and the smeared Coulomb correction <em>to</em> the Coulomb interaction.</p>
+<pre><code class="language-python">p = sim.potential.Ewald( Sys, Cut=2.5, Shift=True, Coef=0.715, FixedCoef=True, Label='ewald' )
+pcorr = sim.potential.smearedcoulombEwCorr( Sys, Coef = 0.715, Cut = 2.5, BornA = 0.55, FixedCoef = True, FixedBornA = True, Label=&quot;smearedCoulCorr&quot; )
+Sys.ForceField.extend([p,pcorr])
+</code></pre>
+<p>The jupyter notebook further shows how if the charge parameters are held fixed, the simulation can be further accelerated by using a proxy system without electrostatic interactions to calculate energy differences with variations in non-bonded interactions. (since the electrostatic energy parameters are held constant).</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+    
+  </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme_extra.js" defer></script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../javascripts/mathjax.js" defer></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6" defer></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

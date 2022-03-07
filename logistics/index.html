@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Installation - AA2FTS</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../css/theme.css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Installation";
+    var mkdocs_page_input_path = "logistics.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/python.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> AA2FTS</a>
+        
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="..">Welcome to AA2FTS</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../theory/">Theory</a>
+                    </li>
+                </ul>
+                <ul class="current">
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">Installation</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#package-management">Package Management</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#molecular-dynamics">Molecular Dynamics</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#coarse-graining">Coarse Graining</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#field-theory">Field Theory</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#other-related-tools">Other related tools</a>
+    </li>
+    </ul>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../tutorials/bestpractices/">Best Practices</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../tutorials/">Case Studies</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../simulations/">Running Simulations</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../publications/">References</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">AA2FTS</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Installation</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="software-installation-dependencies-and-logistics">Software installation, dependencies, and logistics</h1>
+<p>The tutorials and software we provide rely heavily on the following software packages. The functions of each piece of software are described, so that researchers may make substitutions where appropriate.</p>
+<h2 id="package-management">Package Management</h2>
+<p>It is highly recommended to use a package manager to install the relevant code. Conda is recommended, and some packages are available only through pip (which comes with conda).</p>
+<ol>
+<li><a href="https://docs.conda.io/en/latest/">conda</a></li>
+<li><a href="https://pip.pypa.io/en/stable/">pip</a></li>
+</ol>
+<h2 id="molecular-dynamics">Molecular Dynamics</h2>
+<ol>
+<li>
+<p><a href="https://openmm.org/">OpenMM</a></p>
+<p>Particle simulations, used for both all-atom and coarse-grained simulations.</p>
+<p><code>conda install -c omnia openmm</code></p>
+</li>
+<li>
+<p><a href="http://leandro.iqm.unicamp.br/m3g/packmol/home.shtml">Packmol</a></p>
+<p>For packing and initializing large molecular systems.</p>
+</li>
+<li>
+<p><a href="https://mdtraj.org/1.9.4/api/generated/mdtraj.Trajectory.html">MDTraj</a></p>
+<p>For manipulating and analyzing molecular dynamics trajectories</p>
+<p><code>conda install -c conda-forge mdtraj</code></p>
+</li>
+</ol>
+<h2 id="coarse-graining">Coarse Graining</h2>
+<ol>
+<li>
+<p><a href="https://github.com/EqualAPriori/sim-utils">Sim-Utils</a></p>
+<p>Interface and utilities for running and driving the coarse-graining package used at BioPACIFIC. While the interface for manipulating and working with system definitions and force fields is public, for access to the underlying coarse-graining engine, contact BioPACIFIC.</p>
+</li>
+</ol>
+<h2 id="field-theory">Field Theory</h2>
+<ol>
+<li>
+<p><a href="https://www.mrl.ucsb.edu/~fredrickson/">PolyFTS</a></p>
+<p>In-house field theory package maintained by Professor Glenn Fredrickson's group. For access, contact BioPACIFIC. </p>
+</li>
+</ol>
+<h2 id="other-related-tools">Other related tools</h2>
+<ol>
+<li><a href="https://www.lammps.org/">LAMMPS</a> - particle based simulation</li>
+<li><a href="https://github.com/shirtsgroup/cg_openmm">cgOpenMM</a> - coarse grained simulations built on top of the OpenMM engine</li>
+<li><a href="http://glotzerlab.engin.umich.edu/hoomd-blue/">HOOMD-blue</a> - GPU accelerated coarse grained particle simulations</li>
+<li><a href="https://freud.readthedocs.io/en/latest/index.html">Freud</a> - analysis tools of self assembling systems</li>
+<li><a href="https://www.votca.org/">VOTCA</a> - another open source coarse graining package</li>
+<li><a href="https://mosdef.org/">MoSDeF</a> - a package of tools for setting up simulations.</li>
+</ol>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../tutorials/bestpractices/" class="btn btn-neutral float-right" title="Best Practices">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../theory/" class="btn btn-neutral" title="Theory"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../theory/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../tutorials/bestpractices/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../javascripts/mathjax.js" defer></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6" defer></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

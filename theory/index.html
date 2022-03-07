@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Theory - AA2FTS</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../css/theme.css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Theory";
+    var mkdocs_page_input_path = "theory/index.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/python.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> AA2FTS</a>
+        
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="..">Welcome to AA2FTS</a>
+                    </li>
+                </ul>
+                <ul class="current">
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">Theory</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#from-all-atom-to-coarse-grained-models-the-relative-entropy">From all atom to coarse-grained models: the relative entropy</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#from-coarse-grained-particle-models-to-continuum-field-models-field-theoretic-transformations">From coarse-grained particle models to continuum field models: field theoretic transformations</a>
+    </li>
+    </ul>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../logistics/">Installation</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../tutorials/bestpractices/">Best Practices</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../tutorials/">Case Studies</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../simulations/">Running Simulations</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../publications/">References</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">AA2FTS</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Theory</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="theory">Theory</h1>
+<p>Full stack materials design requires understanding the relationship between fine-grained chemical detail and resulting macroscopic properties. The computational workflow at the <a href="https://biopacificmip.org/">BioPacific MIP</a> provides a suite of tools to do exactly that.</p>
+<p>There are three levels of simulation capabilities in toolbox: all-atom resolution molecular dynamics, coarse-grained molecular dynamics, and field theoretic simulations. The key to making this all work is the careful construction of coarse-grained molecular models that are simultaneously simulatable in field theoretic simulations while as faithful as possible to the underlying all atom molecular dynamics simulations.</p>
+<p>Many of the details, nuances, and theoretical considerations of model selection are outlined in the <a href="bestpractices.md">best practices</a> page. </p>
+<p>On this page we give a high level overview of the mathematical transformations underlying the development of coarse grained models from all atom simulations, and the field theoretic, continuum simulation of particle based models.</p>
+<h2 id="from-all-atom-to-coarse-grained-models-the-relative-entropy">From all atom to coarse-grained models: the relative entropy</h2>
+<p>Systematic bottom-up coarse-graining refers to the systematic elimination of chemical degrees of freedom. Most commonly, this is effected by replacing collections of atoms with pseudo-atoms, or beads, typically representing the center of mass of the atoms being replaced. </p>
+<p>Given a particular mapping from all atom coordinates <span class="arithmatex">\(\{\mathbf{R}\}\)</span> to coarse grained coordinates <span class="arithmatex">\(\{\mathbf{r}\}\)</span>, the challenge is to determine a suitable interaction potential between coarse-grained beads that reproduces characteristics of the all atom simulation. Formally, this means that instead of simulating with interaction energy <span class="arithmatex">\(U(\{\mathbf{r}\})\)</span> governing the all atom representation, one needs to find an appropriate potential of mean force <span class="arithmatex">\(W(\{\mathbf{R}\})\)</span>. </p>
+<p>The optimal potential of mean force <span class="arithmatex">\(W\)</span> exactly reproducing configurational distributions of the all atom model can be formally defined:</p>
+<p>$$
+\beta W(\{\mathbf{R}\}) = -\ln\left(V^{N-n} \int d\{\mathbf{r}\} e^{-H(\{\mathbf{r}\})} \delta(M(\{\mathbf{r}\})-\{\mathbf{R}\}) \right)
+$$
+where <span class="arithmatex">\(M(\\{\mathbf{r}\\})\)</span> is a mapping operator converting all-atom coordinates to coarse-grained coordinates.</p>
+<p>However, this object is multi-body in nature and intractable to determine. In practice, pairwise potentials are more practical, and several procedures exist to find pairwise approximations of <span class="arithmatex">\(W\)</span>. The coarse graining technique employed in the BioPACIFIC simulation software suite is <a href="https://onlinelibrary.wiley.com/doi/abs/10.1002/9781119290971.ch5">relative entropy minimization</a>, which seeks to minimize the information loss, or maximize the configurational probability distribution overlap between the coarse-grained system and (mapped) all atom model, as measured by the relative entropy between two probability distributions <span class="arithmatex">\(P_1(x)\)</span> and <span class="arithmatex">\(P_2(x)\)</span>:</p>
+<div class="arithmatex">\[
+S_{rel}(P_1|P_2) = \int dx P_1(x) \ln \frac{P_1(x)}{P_2(x)}
+\]</div>
+<p>Schematically, in 1D, the relative entropy can be visualized as thus (image taken from <a href="https://onlinelibrary.wiley.com/doi/abs/10.1002/9781119290971.ch5">Shell, <em>Adv. Chem. Phys.</em> 2016</a>):</p>
+<p><img _="," align="center" alt="Srel in 1D" src="imgs/Srel1D.png" style="height:496px;width:300px" /></p>
+<p>In practice, the minimization of the relative entropy can become a high dimensional optimization problem achieved by solving for:</p>
+<div class="arithmatex">\[
+\frac{\partial S_{rel}}{\partial \lambda_i} = 0
+\]</div>
+<p>where <span class="arithmatex">\(\lambda_i\)</span> refer to coarse grained interaction parameters, such as interaction coefficients or interaction ranges.</p>
+<p>This is handled by the in-house coarse graining simulation software at <a href="https://biopacificmip.org/">BioPacific MIP</a>.</p>
+<h2 id="from-coarse-grained-particle-models-to-continuum-field-models-field-theoretic-transformations">From coarse-grained particle models to continuum field models: field theoretic transformations</h2>
+<p>There are several exact mathematical transformations from particle to continuum descriptions. The one employed in the BioPACIFIC simulation software suite is the <a href="https://oxford.universitypressscholarship.com/view/10.1093/acprof:oso/9780198567295.001.0001/acprof-9780198567295">auxiliary field approach</a>.</p>
+<p>A good series of <a href="https://rrgroup.seas.upenn.edu/lectures/field-theory/">lectures on field theory</a> can be found courtesy of Professor Rob Riggleman.</p>
+<p>In short, the first step is to define particle density <span class="arithmatex">\(\rho_\alpha\)</span> of <span class="arithmatex">\(\alpha\)</span>-species beads as such:</p>
+<div class="arithmatex">\[
+\rho_\alpha(\mathbf{r}) = \sum_{i_\alpha} \delta(\mathbf{r}_{i_\alpha}-\mathbf{r})
+\]</div>
+<p>where the sum is over all particles in the system of species <span class="arithmatex">\(\alpha\)</span>. It is also common to <em>smear</em> these densities by replacing the <span class="arithmatex">\(\delta\)</span> function with a Gaussian <span class="arithmatex">\(\Gamma\)</span>:</p>
+<div class="arithmatex">\[
+\rho_\alpha(\mathbf{r}) = \sum_{i_\alpha} \Gamma(\mathbf{r}_{i_\alpha}-\mathbf{r};a_\alpha)
+\]</div>
+<div class="arithmatex">\[
+\Gamma(r;\alpha) = \frac{1}{(2\pi a_\alpha^2)^{3/2}}e^{-r^2/2a^2}
+\]</div>
+<p>This then allows for the critical mathematical trick of using the Hubbard Stratonovich transformation, an <em>exact</em> transformation that allows for the transformation of <em>any</em> pairwise, positive definite interaction <span class="arithmatex">\(U(r,r')\)</span>.</p>
+<p>Definint the shorthand:
+$$\begin{eqnarray}
+\langle f | A | f \rangle \equiv&amp; \int_{dr}\int_{dr'}f(r)A(r,r')f(r')
+\end{eqnarray}
+$$
+$$
+\langle f, g \rangle \equiv \int_{dr}f(r)g(r)
+$$</p>
+<p>we express the Hubbard Stratonovich transformation:
+$$\begin{eqnarray}
+\exp\bigg(-\frac12\langle \rho | U | \rho \rangle\bigg) =&amp;  \frac{1}{Z}\int D\omega \exp\bigg(-\frac12\langle \omega | U | \omega \rangle+i\langle \rho, \omega \rangle\bigg)
+\end{eqnarray}
+$$
+$$
+Z = \int D\omega \exp\left(-\frac12\omega | U | \omega\right)
+$$</p>
+<p>where we have introduced <em>functional integrals</em> over a newly introduced <em>"auxiliary"</em> field <span class="arithmatex">\(\omega\)</span>. </p>
+<p>Note that the density fields only appear linearly in the argument of the exponential, or the new "effective Hamiltonian". This decouples all configuration integrals from one another and is what allows field theories to efficiently treate the configurational space of large molecules. Analytic continuation of the functional integral over <span class="arithmatex">\(\omega\)</span> into the complex plane allows for efficient numerical evaluation of the field integral by concentrating sampling around saddle points. Numerical techniques for solving this formulation are described in <a href="https://oxford.universitypressscholarship.com/view/10.1093/acprof:oso/9780198567295.001.0001/acprof-9780198567295">literature</a>.</p>
+<p>The field theory enables full <a href="../fieldtheory/">field theoretic simulation</a> and useful approximations like self-consistent field theory. It also provides helpful analytical tools for understanding polymeric behavior in disordered solutions, using <a href="meanfield/">mean-field analysis</a> and the <a href="rpa/">random phase approximation</a>.</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../logistics/" class="btn btn-neutral float-right" title="Installation">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href=".." class="btn btn-neutral" title="Welcome to AA2FTS"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../logistics/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../javascripts/mathjax.js" defer></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6" defer></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

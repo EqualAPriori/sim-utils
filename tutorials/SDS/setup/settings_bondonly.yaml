@@ -1,0 +1,20 @@
+---
+sys_name: bondonly
+
+neutralize: False
+box: #get from trajec
+
+temp: 1.
+barostat:
+  pressure: 283.951857
+  pressure_axis: 2
+  tension: 0.0
+integrator:
+  dt: 0.1
+  langevin_gamma: 1.0
+
+run: #for omm, can chain into a protocol, have sequential runs
+  md_engine:  openmm
+  steps_equil: 500000
+  steps_prod: 1000000
+  steps_stride: 4000

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+  <title>Explicit Solvents and (Coarse-Grained) Reference Pressures - AA2FTS</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../../css/theme.css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Explicit Solvents and (Coarse-Grained) Reference Pressures";
+    var mkdocs_page_input_path = "tutorials/explicit-solvent-pref.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/python.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> AA2FTS</a>
+        
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../..">Welcome to AA2FTS</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../theory/">Theory</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../logistics/">Installation</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../bestpractices/">Best Practices</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../">Case Studies</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../simulations/">Running Simulations</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../publications/">References</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">AA2FTS</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Explicit Solvents and (Coarse-Grained) Reference Pressures</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="explicit-solvents-and-coarse-grained-reference-pressures">Explicit Solvents and (Coarse-Grained) Reference Pressures</h1>
+<p>In the spirit of coarse graining, it is recommended to coarse grain to soft interactions that smear out short length scale behaviors. The motivation is that, if possible, one does not want to spend computational resources resolving short length scale molecular structuring. Note that in principle this does not preclude one from retaining thermodynamically appropriate behavior on longer length scales. For example, the virial pressure is calculated as a weighted integral over a pair distribution function, and the same pressure can be reproduced by many different pair correlation functions. In this spirit, coarse grained models with soft short-range interactions only seek to preserve longer-length scale structural correlations and thermodynamic behaviors.</p>
+<h2 id="the-gaussian-interaction-model">The Gaussian Interaction Model</h2>
+<p>The interaction potential of choice is a Gaussian repulsive potential:
+$$
+u_{ij}(r) = \frac{u_{ij}}{(2\pi(a_i^2+a_j^2))^{3/2}}e^{-r^2/(a_i^2+a_j^2)}
+$$
+where <span class="arithmatex">\(u_{ij}\)</span> is the interaction repulsion strength and <span class="arithmatex">\(a_i,a_j\)</span> are the smearing interaction widths of beads <span class="arithmatex">\(i\)</span> and <span class="arithmatex">\(j\)</span>, respectively.</p>
+<p>In the limit where all smearing lengths are the same and all <span class="arithmatex">\(u_ii\)</span> are the same, this model can be exactly mapped to smeared molecular models that use the Helfand compressibility and a <span class="arithmatex">\(\chi\)</span> parameter.</p>
+<p>As illustrated in <a href="https://aip.scitation.org/doi/full/10.1063/5.0022808">Shen et al. 2020</a> and <a href="https://pubs.acs.org/doi/10.1021/acsmacrolett.1c00013">Sherck et al 2021</a>, using such potentials greatly attenuates the repulsive core in pair distributions. This allows for particle overlap and larger time steps in particle simulations. Further, with appropriately chosen repulsive potential strength <span class="arithmatex">\(u_0\)</span>, miscibilities and macroscopic phase behavior can be reproduced, sometimes quantitatively <a href="https://aip.scitation.org/doi/full/10.1063/5.0022808">(Shen et al. 2020)</a>.</p>
+<p>In practice, families of coarse grained models can be calibrated to what is termed in the DPD literature as a "reference coarse-grained pressure" (Fraije) that is not necessarily equal to that of the all-atom system. The intuition is that in nearly incompressible systems (i.e. most solution formulations and solid materials), the actual pressure of the system is usually not of great importance. Rather, it is more important to simply reproduce this nearly incompressible behavior. For example, if modeling water, choosing <span class="arithmatex">\(a_w=0.3nm\)</span> and <span class="arithmatex">\(u_{ww}=20kT*a_w^3\)</span> leads to a reference coarse-grained pressure of <span class="arithmatex">\(P_{cg,ref}\approx10.31kT/a_w^3\)</span> and compressibility <span class="arithmatex">\(0.062_w/kT\approx4.45\cdot 10^{-10}Pa^{-1}\)</span> that is near that of water at room temperature. Again, for these repulsive Gaussian models, most likely <span class="arithmatex">\(P_{cg,ref}\)</span> does <em>not</em> equal that of the all-atom system. As long as the pressure-dependences are not of interest, coarse grained simulations run at <span class="arithmatex">\(P_{cg}\)</span> model simulations of the all-atom system at constant pressure (e.g. <span class="arithmatex">\(1\)</span>atm for many aqueous solution studies). Further, if pressure changes <em>are</em> of interest, as long as the compressibility is reproduced, it still makes sense to compare AA simulations studied at pressure <span class="arithmatex">\(P=P_{AA,ref}+\Delta P\)</span> to CG simulations studied at <span class="arithmatex">\(P=P_{cg,ref}+\Delta P\)</span>.</p>
+<p>Models coarse grained to this <span class="arithmatex">\(P_{ref}\)</span> are said to be consistent and calibrated. This follows the spirit of <a href="https://aip.scitation.org/doi/10.1063/1.474784">dissipative particle dynamics (DPD)</a>, which use soft, truncated quadratic potentials instead of the soft Gaussian potentials employed in field theory. DPD also requires choosing a characteristic <span class="arithmatex">\(P_ref\)</span> to operate at.</p>
+<h2 id="estimating-initial-and-choosing-parameters">Estimating Initial and Choosing Parameters</h2>
+<p>With sufficiently large smearing lengths, mean field analytical approximations give really good estimates of the pressure of dense, nearly incompressible systems like liquids.</p>
+<p>For example, for a homopolymer with length <span class="arithmatex">\(N\)</span>, the mean-field pressure is:</p>
+<div class="arithmatex">\[
+\beta P = \frac{\rho}{N} + \frac{1}{2}u_{ii}\rho^2
+\]</div>
+<p>where <span class="arithmatex">\(\rho\)</span> is the bead density. The compressibility in this model is:
+$$
+\kappa = \left( \frac{\rho}{N} + u_{ii}\rho^2 \right)^{-1}.
+$$</p>
+<p>For water, choosing <span class="arithmatex">\(u_{ii}=15v_w\)</span> and <span class="arithmatex">\(\rho= 1/v_w\)</span>, where <span class="arithmatex">\(v_w\)</span> is the water volume, gives <span class="arithmatex">\(P_{ref}=8.5kT/v_w\)</span> and a compressibility <span class="arithmatex">\(k_BT/16v_w\approx4.5\times10^{-10}\)</span>Pa, which roughly reproduces the compressibility water at room temperature. Note that since water is quite incompressible at room temeprature, it can actually be safe to <a href="https://pubs.acs.org/doi/pdf/10.1021/acsmacrolett.1c00013">reduce the compressibility of the coarse grained water by even a factor of 3</a>.</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+    
+  </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme_extra.js" defer></script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../javascripts/mathjax.js" defer></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6" defer></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

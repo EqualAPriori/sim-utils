@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+  <title>Best Practices - AA2FTS</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../../css/theme.css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Best Practices";
+    var mkdocs_page_input_path = "tutorials/bestpractices.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/python.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> AA2FTS</a>
+        
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../..">Welcome to AA2FTS</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../theory/">Theory</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../logistics/">Installation</a>
+                    </li>
+                </ul>
+                <ul class="current">
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">Best Practices</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#i-choosing-a-coarse-grained-interaction-model">I. Choosing a coarse-grained interaction model</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-use-explicit-solvent-models-with-soft-interactions">1. Use explicit solvent models with soft interactions</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-use-soft-bonded-interactions">2. Use soft bonded interactions</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-charged-interactions">3. Charged interactions</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#ii-collecting-appropriate-all-atom-simulation-data">II. Collecting appropriate all-atom simulation data</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-homogeneous-bulk-systems">1. Homogeneous, bulk systems</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-mixtures-and-multiple-bead-types">2. Mixtures and multiple bead types</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-miscible-systems">3. Miscible systems</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#4-immiscible-systems">4. Immiscible systems</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#5-structured-systems">5. Structured systems</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#running-field-theory">Running Field Theory</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-phase-separation-estimation-mean-field-theory">1. Phase separation estimation: Mean Field Theory</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-phase-separation-estimation-of-charged-systems-coacervation-and-rpa-theory">2. Phase separation estimation of charged systems: coacervation and RPA theory</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-comparing-structured-phase-stability-with-self-consistent-field-theory">3. Comparing structured phase stability with self consistent field theory</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../">Case Studies</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../simulations/">Running Simulations</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../publications/">References</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">AA2FTS</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Best Practices</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="best-practices-in-a-nutshell">Best practices, in a nutshell</h1>
+<p>This section collects best practices and tutorials, organized by topic. It is mean to be a quick guide for finding relevant example molecular systems and theoretical considerations</p>
+<p>Most realistic systems are highly multicomponent, and involve several subtle coarse graining steps and decisions. </p>
+<h2 id="i-choosing-a-coarse-grained-interaction-model">I. Choosing a coarse-grained interaction model</h2>
+<p>The following tutorials emphasize the theoretical considerations when constructing models amenable for running field theory. </p>
+<h3 id="1-use-explicit-solvent-models-with-soft-interactions">1. Use explicit solvent models with soft interactions</h3>
+<p>For a sample system, see this the <a href="../water/">pure water</a> case study.</p>
+<p>For theoretical considerations, see <a href="../explicit-solvent-pref/">here</a>.</p>
+<p>In the spirit of coarse graining, it is recommended to use soft interactions that smear out short length scale structure and behaviors, and obtain coarse grained parameters that still reproduce larger scale structural and thermodynamic properties.</p>
+<p>The interaction potential of choice is a Gaussian repulsive potential:
+$$
+u_{ij}(r) = \frac{u_0}{(2\pi(a_i^2+a_j^2))^{3/2}}e^{-r^2/(a_i^2+a_j^2)}
+$$
+where <span class="arithmatex">\(u_0\)</span> is the interaction repulsion strength and <span class="arithmatex">\(a_i,a_j\)</span> are the smearing interaction widths of beads <span class="arithmatex">\(i\)</span> and <span class="arithmatex">\(j\)</span>, respectively.</p>
+<h3 id="2-use-soft-bonded-interactions">2. Use soft bonded interactions</h3>
+<p>For a sample system, see the <a href="../dodecane/">pure dodecane</a> case study.</p>
+<p>For theoretical considerations, see <a href="../bonded/">here</a></p>
+<p>A typical bonded interaction is of the harmonic form:
+$$
+u(r) = \frac{k}{2}(r-r_0)^2
+$$
+where <span class="arithmatex">\(k\)</span> is the bond strength and <span class="arithmatex">\(r_0\)</span> is a reference bond length. </p>
+<h3 id="3-charged-interactions">3. Charged interactions</h3>
+<p>For a sample system, see the <a href="../salt/">NaCl</a> case study.</p>
+<p>For theoretical considerations, see <a href="../electrostatics/">electrostatics</a>. It is recommended to use </p>
+<div class="arithmatex">\[
+U_{elec}    = \frac{l_b}{2} \sum_{ij} \frac{1}{r_{ij}}erf\left( \frac{r_{ij}}{2\sqrt{a_i^2/2+a_j^2/2}}\right)
+\]</div>
+<p>Where <span class="arithmatex">\(a_i\)</span> and <span class="arithmatex">\(a_j\)</span> are the electrostatic smearing length and the <span class="arithmatex">\(l_b\)</span> factor is the Bjerrum length</p>
+<p>$$
+l_b = \frac{e^2}{4\pi\epsilon_0\epsilon_r k_BT}
+$$
+with <span class="arithmatex">\(\epsilon_r\)</span> the dielectric constant of the solvent.</p>
+<h2 id="ii-collecting-appropriate-all-atom-simulation-data">II. Collecting appropriate all-atom simulation data</h2>
+<p>The collection of appropriate all-atom molecular trajectories is of paramount importance in obtaining reasonable coarse grained models. It is well-documented that systematic coarse graining can be <a href="https://aip.scitation.org/doi/full/10.1063/5.0022808">highly dependent on the all-atom simulations used to derive the models</a>. The tutorials below help guide one through that process.</p>
+<h3 id="1-homogeneous-bulk-systems">1. Homogeneous, bulk systems</h3>
+<p>For a sample system, see the <a href="../water/">pure water</a> case study.</p>
+<p>As described in the <a href="../explicit-solvent-pref/">theoretical considerations for explicit solvent</a>, it is highly recommended that bulk systems be coarse grained in the isobaric (NPT) ensemble at an appropriately chosen coarse grained reference <span class="arithmatex">\(P_{cg}\)</span>. Usually, <span class="arithmatex">\(P_{cg}\)</span> does not need to match the pressure of the all atom system, as long as the compressibility is approximately right (what matters are volume changes with changing pressure and composition, not the absolute pressure). For typical applications, <span class="arithmatex">\(P_{AA}=1\)</span>bar and <span class="arithmatex">\(P_{cg}=8.5 k_BT/v_w\)</span> is a good choice if one wants to use fairly incompressible water as a coarse grained reference.</p>
+<h3 id="2-mixtures-and-multiple-bead-types">2. Mixtures and multiple bead types</h3>
+<p>Mixtures, which involve multiple bead types, needs some extra care. <a href="https://aip.scitation.org/doi/full/10.1063/5.0022808">Recent work</a> has shown that naive coarse graining in the NVT ensemble can lead to very poor predictions of solution thermodynamics like activity coefficients. The key is to simulate from molecular configurations and ensembles where thermodynamically relevant collective variables are sensitive to the underlying molecular interactions.</p>
+<h3 id="3-miscible-systems">3. Miscible systems</h3>
+<p>For a sample system, see the <a href="../methanol_water/">methanol-water</a> case study.</p>
+<p>For a miscible system, the density is a relevant collective variable conjugate to the activity coefficient. The density response can in turn be probed by coarse graining using an <a href="https://aip.scitation.org/doi/full/10.1063/5.0022808">external potential ensemble</a>.</p>
+<h3 id="4-immiscible-systems">4. Immiscible systems</h3>
+<p>For a sample system, see the <a href="../dodecane/">dodecane</a> case study.</p>
+<p>For an immiscible system like dodecane-water, the system already naturally forms two segregated phases. In practice these systems are coarse-grained from a bulk-phase-segregated state. The appropriate ensemble simply barostats the axis normal to the interface, while fixing the dimensions parallel to the interface. In OpenMM, the interface-normal should be the <span class="arithmatex">\(z-axis\)</span>.</p>
+<h3 id="5-structured-systems">5. Structured systems</h3>
+<p>For a sample system, see the <a href="../SDS/">SDS</a> case study.</p>
+<p>For a structured system like one involving a surfactant, one can experiment with coarse graining from the various structures formed by the molecule. It is suggested to coarse grain from well-reproducible structures, for example micelles at the experimentally measured aggregation number, or surfactants deposited at a planar interface between two fluids.</p>
+<h2 id="running-field-theory">Running Field Theory</h2>
+<h3 id="1-phase-separation-estimation-mean-field-theory">1. Phase separation estimation: <a href="theory/meanfield.md">Mean Field Theory</a></h3>
+<p>For documentation, see <a href="https://pubs.acs.org/doi/pdf/10.1021/acsmacrolett.1c00013">here</a>.</p>
+<p>For a sample system, see the <a href="../PEO/">PEO</a> case study.</p>
+<p>Especially for homogeneous phases, the mean field theory can provide quick analytical estimates of molecular compatibility. </p>
+<h3 id="2-phase-separation-estimation-of-charged-systems-coacervation-and-rpa-theory">2. Phase separation estimation of charged systems: coacervation and <a href="theory/rpa.md">RPA theory</a></h3>
+<p>Systems undergoing phase separation induced by charge-complexation (as opposed to other causes like hydrophobicity) can be described using RPA theory, which describes attractions due to field fluctuations, or charge charge correlations.</p>
+<p>For theoretical considerations, see this notebook studying <a href="../PE/">PAA-PAH</a>.</p>
+<h3 id="3-comparing-structured-phase-stability-with-self-consistent-field-theory">3. Comparing structured phase stability with self consistent field theory</h3>
+<p>For a sample system, see this notebook studying <a href="../SDS/">SDS</a>.</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../" class="btn btn-neutral float-right" title="Case Studies">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../../logistics/" class="btn btn-neutral" title="Installation"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../../logistics/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme_extra.js" defer></script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../javascripts/mathjax.js" defer></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6" defer></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

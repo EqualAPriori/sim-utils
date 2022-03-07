@@ -1,0 +1,24 @@
+# Example system definition
+---
+paths:
+- ./
+- ./setup/
+
+bead_types:
+- fields: [mass, charge]
+  defaults: [1.0, 0.0]
+- [W, 1.0, 0.0]
+- [MOH, 1.0, 0.0]
+
+res_types:
+
+mol_types:
+- name: W
+  def: h2o_mapped.pdb
+- name: MOH
+  def: moh_mapped.pdb
+
+system:
+- [ W, 1000 ]
+- [ MOH, 450 ]
+

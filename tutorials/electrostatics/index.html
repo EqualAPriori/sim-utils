@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+  <title>Electrostatic interactions - AA2FTS</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../../css/theme.css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Electrostatic interactions";
+    var mkdocs_page_input_path = "tutorials/electrostatics.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/python.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> AA2FTS</a>
+        
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../..">Welcome to AA2FTS</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../theory/">Theory</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../logistics/">Installation</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../bestpractices/">Best Practices</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../">Case Studies</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../simulations/">Running Simulations</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../publications/">References</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">AA2FTS</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Electrostatic interactions</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="electrostatic-interactions">Electrostatic interactions</h1>
+<p>Electrostatic interactions are important for maintaining the aqueous solubility of many polymeric and surfactant molecules, and are also intimately involved in many self assembly processes, driving electrostatic complexation.</p>
+<h2 id="smeared-electrostatics">Smeared Electrostatics</h2>
+<p>The simplest electrostatic interaction compatible with both particle-based molecular simulation and field theory is a <em>smeared</em> electrostatic interaction:</p>
+<div class="arithmatex">\[
+U_{elec}    = \frac{l_b}{2} \sum_{ij} \frac{1}{r_{ij}}erf\left( \frac{r_{ij}}{2\sqrt{a_i^2/2+a_j^2/2}}\right)
+\]</div>
+<p>Where <span class="arithmatex">\(a_i\)</span> and <span class="arithmatex">\(a_j\)</span> are the electrostatic smearing length. It is conventional to take this smearing length to be the same as the smearing length in the <a href="../explicit-solvent-pref/">nonbonded interactions</a>. This is assumed in the field theory models, although it is not strictly necessary. The main advantage of using a smeared electrostatics model are many: 1) it avoids singularities in the energy when two charged species overlap, and 2) it allows a field theory model to physically capture a combination of both <a href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.81.021501">a Born solvation and correlation energies</a>. Roughly speaking, the solvation energy (will come out to <span class="arithmatex">\(l_b/2\pi^{1/2}a\)</span> ) represents the energy to solvate a single ion in solvent, while the correlation energy is a many-body effect describing the interaction of ions with other ions.</p>
+<p>The <span class="arithmatex">\(l_b\)</span> factor is the Bjerrum length</p>
+<div class="arithmatex">\[
+l_b = \frac{e^2}{4\pi\epsilon_0\epsilon_r k_BT}
+\]</div>
+<p>which characterizes the electrostatic interaction strength. The dielectric constant <span class="arithmatex">\(\epsilon_r\approx80\)</span> in water at room temperature, leading to <span class="arithmatex">\(l_b\approx 0.7\)</span>nm. For implicit solvent water models it is natural to choose <span class="arithmatex">\(\epsilon_r\approx80\)</span> to model the electrostatic effects of water. For the explicit solvent models, if we do not describe the solvent molecules with dipoles (see following section), the dielectric screening effect must be taken into account by again choosing an appropriate dielectric constant <span class="arithmatex">\(\epsilon_r\)</span> or <span class="arithmatex">\(l_b\)</span>.</p>
+<p>The Bjerrum length should be adjusted for every new temperature that a model is parameterized at. It is customary to choose <span class="arithmatex">\(l_b\)</span> to be the solvent's dielectric constant, as this exactly reproduces the dilute-limit electrostatic interaction between two charges. This approximation is good in the limit where a solvent is dominant. There are no standard procedures for interpolating between two environments with very different dielectric constants, although approximations can be made by <a href="https://pubs.acs.org/doi/abs/10.1021/acs.macromol.1c00095">adding additional <span class="arithmatex">\(\chi\)</span> interactions to model the solvation penalty</a> of moving from a high dielectric to low dielectric environment. In a similar vein, the relative entropy minimization will naturally try to account for these electrostatic effects in effective nonbonded interactions.</p>
+<p>This smeared electrostatic interaction has been used in <a href="https://www.pnas.org/doi/10.1073/pnas.1900435116">field theory</a> and also in <a href="https://arxiv.org/abs/1608.00626">dissipative particle dynamics models</a>.</p>
+<h2 id="dipolar-interactions">Dipolar interactions</h2>
+<p>The field theory also allows for <a href="https://aip.scitation.org/doi/full/10.1063/1.4964680">dipolar interactions</a>. Such field theoretic descriptions allow for explicit dipoles on solvent molecules to naturally generate solvation effects and dielectric screening effects. However, these can not be efficiently and exactly implemented in particle-based simulations, so we do not consider them in the context of the all atom to field theory work flow.</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+    
+  </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme_extra.js" defer></script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../javascripts/mathjax.js" defer></script>
+      <script src="https://polyfill.io/v3/polyfill.min.js?features=es6" defer></script>
+      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>
