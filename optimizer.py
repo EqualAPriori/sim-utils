@@ -52,7 +52,7 @@ def create_optimizer(Sys, traj, md_engine, steps_equil, steps_prod, steps_stride
     print("... use target histograms: {}".format(UseTarHists))
 
     Opt = OptClass(Sys, Map, Beta=1./Sys.TempSet, Traj=traj, FilePrefix=Sys.Name, ElecSys=ElecSys,
-            SaveLoadArgData=True, TempFileDir=os.getcwd(), UseTarHists=UseTarHists)
+            LoadArgData=True, TempFileDir=os.getcwd(), UseTarHists=UseTarHists)
 
     Opt.ConstrainNeutralCharge()
 
