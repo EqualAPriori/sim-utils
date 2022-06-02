@@ -223,7 +223,7 @@ def setup_pair_ljg( Sys, sim_atom_types, ff_dict ):
   '''
   ff_type = 'pair_ljg'
   param_names = ['Cut','B','Kappa','Dist0','Sigma','Epsilon']
-  addtl_dict = {'Fixed':True} #just default. fixables will be updated by ff_dict.
+  addtl_dict = {'Fixed':True,'Shift':False} #just default. fixables will be updated by ff_dict.
   ffs = setup_ff_base( Sys, sim_atom_types, ff_dict, ff_type, param_names, addtl_dict )
   #my default is to set B.Min to negative 100
   for ff in ffs:
@@ -311,13 +311,19 @@ def setup_ff_base( Sys, sim_atom_types, ff_dict, ff_type, param_names, addtl_dic
         f = sim.atomselect.Filter( atypes )
       elif len(atypes) == 2:
         bonded = is_bonded_dict[ff_type]
-        f = sim.atomselect.PolyFilter( atypes, Bonded=bonded )
+        if bonded: f = sim.atomselect.PolyFilter( atypes, Bonded=bonded )
+        else: f = sim.atomselect.PolyFilter( atypes ) #Bonded=None
 
       #define
       param_dict = { param_name:ff_entry[param_name]['val'] for param_name in param_names }
       for k,v in addtl_dict.items(): #add the additional default arguments to param_dict
-        param_dict[k] = v
+        if k in ff_entry:
+          param_dict[k] = ff_entry[k]
+        else:
+          param_dict[k] = v
       p = sim_potential_dict[ff_type]( Sys, Filter=f, Label = ff_entry['name'], **param_dict)
+      print(param_dict)
+      print(ff_entry['name'])
       #fixable_dict= { name:ii for ii,name in enumerate(p.Param.Names) }
       #for param_name in fixable_dict:
       #  p.Param.Fixed[fixable_dict[param_name]] = ff_entry[param_name]['fixed']
@@ -354,13 +360,14 @@ def save_params_to_dict( force_field, out_dict ):
   Version 0: Assume that the out_dict already has the entire structure set up already, i.e. all fields already exist
   Version 1: Create and format the parameters appropriately in out_dict if they don't exist. Note that some of the common parameters, like cutoff, etc. won't be included in the first pass.
   '''
+  print('SAVING sim forcefield parameters to an output dictionary')
   ffdict = {p.Name:p for p in force_field}
   fftype_map = {'bond':'bond_harmonic', 'ljg':'pair_ljg', 
         'smearedcoulombEwCorr':'coulomb_smeared', 
         'external_sinusoid':'external_sin', 'ewald':'skip'}
 
   # For efficiency, collect potentials by type
-  ff_by_type = {}
+  ff_by_type = {} #will be {ff_simtype: [list of sim potentials]}
   for ff_sim in force_field:
     ff_type_sim = ff_sim.Names[0]
     if ff_type_sim not in ff_by_type:
@@ -369,18 +376,19 @@ def save_params_to_dict( force_field, out_dict ):
 
   # Now go through and set the potentials
   for ff_type_sim,ffs in ff_by_type.items():
-    ff_type_out = fftype_map[ ff_type_sim ]
+    ff_type_out = fftype_map[ ff_type_sim ] #retrieve corresponding fftype name in lingua franca
     if ff_type_out in ['skip']:
       continue
     output_fflist = out_dict[ff_type_out]['params_sim'] 
-    ff_by_index_in_outdict = { ff['name']:ii for ii,ff in enumerate(output_fflist)}
+    ff_by_index_in_outdict = { ff['name']:ii for ii,ff in enumerate(output_fflist)} #dict to get index of a ff in the out_dict, given the ff's name
     print('---')
     print(output_fflist)
     print(ff_by_index_in_outdict)
-    for ff_sim in ffs:
+    for ff_sim in ffs: #Careful, I do not check if potential names are repeated!
       ff_out = output_fflist[ ff_by_index_in_outdict[ff_sim.Label] ]
-      for param_name in ff_sim.Param.Names:
-        ff_out[param_name]['val'] = ff_sim.__getattr__(param_name)[0]
+      for ip,param_name in enumerate(ff_sim.Param.Names):
+        ff_out[param_name]['val'] = float(ff_sim.__getattr__(param_name)[0])
+        ff_out[param_name]['fixed'] = bool(ff_sim.Fixed[ip])
 
 
 # ===== misc. helpers for working with sim =====
@@ -395,6 +403,44 @@ def set_params_from_file(force_field, ff_file):
   with open(ff_file, 'r') as of: s = of.read()
   print('... Setting FF with file {} ...\n{}'.format(ff_file,s))
   force_field.SetParamString(s)      
+
+def update_ffdef_from_paramstring( ffdef, ff_string ):
+  ''' Update our custom forcefield definition object
+  Parameters
+  ----------
+  ffdef : the highest-level ffdef object
+  ff_string : string. if has '>>> POTENTIAL', parse directly; otherwise read file
+
+  Notes:
+  ------
+  will update the ffdef.processed_file field
+  '''
+  import ast
+  outff = ffdef.processed_file
+  if '>>> POTENTIAL' in ff_string:
+    s = ff_string.strip()
+  else:
+    with open(ff_string,'r') as f:
+      s = f.read()
+      s = s.strip()
+
+  for dat in s.split(">>> POTENTIAL")[1:]:
+    ThisName = dat.split("\n")[0].strip()
+    ThisData = ast.literal_eval(dat[dat.index("\n")+1:].strip())
+    #skip globals
+    foundmatch = False
+    for fftypename,fftype in outff.items():
+      for p in fftype['params_sim']:
+        if p['name'] == ThisName:
+          foundmatch = True
+          print('found match for {} in ffdef, updating'.format(ThisName))
+          #print('found match for {} in ffdef, updating {} into {}'.format(ThisName,p,ThisData))
+          for k,v in ThisData.items():
+            p[k]['val'] = v
+
+    if not foundmatch:
+      print('did not find match for {} in the ffdef, skipping'.format(ThisName))
+
 
 def update_specific_params(force_field, params):
   """Update specific terms of an existing Sys.ForceField
@@ -505,6 +551,24 @@ def load_system( _Sys, ff_file = None ):
 
   # lock and load
   _Sys.Load()
+
+def get_ff(FF,name):
+  ''' returns the potential with matching name from a Sys ForceField object
+  Parameters
+  ----------
+  FF : sim.ForceField
+  name : str
+
+  Returns
+  -------
+  ff : sim.potential
+  '''
+  ffs = [ff for ff in FF if ff.Label == name]
+  return ff
+
+#usually, for saving, just use Opt's wrapper for Sys.ForceField.ParamString()
+#def save_system(_Sys):
+#  ''' save force field for system '''
 
 
 

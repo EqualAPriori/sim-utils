@@ -11,6 +11,8 @@ import numpy as np
 # 1) extended ensemble
 # 2) Hessian recalculation
 
+LoadArgData = True
+
 ### Create optimizer
 def create_optimizer(Sys, traj, md_engine, steps_equil, steps_prod, steps_stride, ElecSys=None):
     # === create a mapping object (1:1, since actual mapped traj created earlier) ===
@@ -52,7 +54,7 @@ def create_optimizer(Sys, traj, md_engine, steps_equil, steps_prod, steps_stride
     print("... use target histograms: {}".format(UseTarHists))
 
     Opt = OptClass(Sys, Map, Beta=1./Sys.TempSet, Traj=traj, FilePrefix=Sys.Name, ElecSys=ElecSys,
-            SaveLoadArgData=True, TempFileDir=os.getcwd(), UseTarHists=UseTarHists)
+            LoadArgData=LoadArgData, TempFileDir=os.getcwd(), UseTarHists=UseTarHists)
 
     Opt.ConstrainNeutralCharge()
 
@@ -63,8 +65,8 @@ def create_optimizer(Sys, traj, md_engine, steps_equil, steps_prod, steps_stride
 
     # extra prep for the optimizer object
     sim.srel.optimizetraj.PlotFmt = 'png'
-    Opt.MinReweightFrames = 10
-    #Opt.MinReweightFrac = 0.15
+    #Opt.MinReweightFrames = 10
+    Opt.MinReweightFrac = 0.15
 
     # === Diagonstic, check whether parameters are fixed ===
     print('...check fixed parameters status:')

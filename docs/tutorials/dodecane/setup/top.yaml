@@ -1,0 +1,19 @@
+# Example system definition
+---
+paths:
+- ./
+
+bead_types:
+- fields: [mass, charge]
+  defaults: [1.0, 0.0]
+- [C2, 1.0, 0.0]
+
+res_types:
+
+mol_types:
+- name: C2
+  def: C12_mapped.pdb
+
+system:
+- [ C12, 170 ]
+

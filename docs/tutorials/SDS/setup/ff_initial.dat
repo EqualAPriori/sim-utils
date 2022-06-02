@@ -1,0 +1,28 @@
+>>> POTENTIAL Global
+{'FluctG0': 1e-06, 'Charge': [0.0, 0.0, 0.0, 0.0, 0.0], 'FluctU0': 0.0}
+>>> POTENTIAL bond_C2_C2
+{'Dist0': 0.0, 'FConst': 16.493116675153434}
+>>> POTENTIAL bond_C2_SO4
+{'Dist0': 0.0, 'FConst': 40.17024661088798}
+>>> POTENTIAL ljg_Cl_Cl
+{'Epsilon': 0.0, 'B': 2.5944, 'Kappa': 2.5890646235634747, 'Dist0': 0.0, 'Sigma': 1.0}
+>>> POTENTIAL ljg_Na_Cl
+{'Epsilon': 0.0, 'B': -0.91627, 'Kappa': 2.5890646235634747, 'Dist0': 0.0, 'Sigma': 1.0}
+>>> POTENTIAL ljg_Na_W
+{'Epsilon': 0.0, 'B': -0.21981, 'Kappa': 2.5890646235634747, 'Dist0': 0.0, 'Sigma': 1.0}
+>>> POTENTIAL ljg_Cl_W
+{'Epsilon': 0.0, 'B': 0.66048, 'Kappa': 2.5890646235634747, 'Dist0': 0.0, 'Sigma': 1.0}
+>>> POTENTIAL ljg_C2_SO4
+{'Epsilon': 0.0, 'B': 1.3578786584067792, 'Kappa': 2.5890646235634747, 'Dist0': 0.0, 'Sigma': 1.0}
+>>> POTENTIAL ljg_C2_Na
+{'Epsilon': 0.0, 'B': 0.18471357362842666, 'Kappa': 2.5890646235634747, 'Dist0': 0.0, 'Sigma': 1.0}
+>>> POTENTIAL ljg_C2_Cl
+{'Epsilon': 0.0, 'B': 3.212160658318879, 'Kappa': 2.5890646235634747, 'Dist0': 0.0, 'Sigma': 1.0}
+>>> POTENTIAL ljg_SO4_SO4
+{'Epsilon': 0.0, 'B': 2.965702551915631, 'Kappa': 2.5890646235634747, 'Dist0': 0.0, 'Sigma': 1.0}
+>>> POTENTIAL ljg_SO4_Na
+{'Epsilon': 0.0, 'B': -1.0093659961156818, 'Kappa': 2.5890646235634747, 'Dist0': 0.0, 'Sigma': 1.0}
+>>> POTENTIAL ljg_SO4_Cl
+{'Epsilon': 0.0, 'B': -0.23907283512030664, 'Kappa': 2.5890646235634747, 'Dist0': 0.0, 'Sigma': 1.0}
+>>> POTENTIAL ljg_SO4_W
+{'Epsilon': 0.0, 'B': 0.18712595675062058, 'Kappa': 2.5890646235634747, 'Dist0': 0.0, 'Sigma': 1.0}

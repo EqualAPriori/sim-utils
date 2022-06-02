@@ -3,6 +3,8 @@
 # TODO
 # 1) save forcefield out in shorthand as well, b/c the processed file is quite verbose and not quite readable, plus still has some funky whitespace issues. Essentially, mainly want to dump specific potentials in one-line format
 # 2) checks/tests/validation?
+# 3) convert defaults sections, not just the params sections
+#
 
 import numpy as np
 import yamlhelper as yaml
@@ -166,7 +168,7 @@ class base_potential():
     #for special options, don't do special formatting/parsing. require user to get it right
     #right now this is for setting up required options that may not have been defined
     if len(cls.options_sim) > 0: 
-      sections = ['defaults_sim', 'defaults_md']
+      sections = ['defaults_sim']
       for section in sections:
         for field,v in cls.options_sim.items():
           if section not in outdict:
@@ -176,8 +178,18 @@ class base_potential():
             outdict[section][field] = copy.deepcopy(v)
           if section == 'defaults_sim':
             sim_default[field] = copy.deepcopy(outdict[section][field])
-          elif section == 'defaults_md':
+    if len(cls.options_md) > 0: 
+      sections = ['defaults_md']
+      for section in sections:
+        for field,v in cls.options_md.items():
+          if section not in outdict:
+            outdict[section] = yaml.YAML.comments.CommentedMap()
+            ffdict[section] = yaml.YAML.comments.CommentedMap()
+          if field not in ffdict[section]:
+            outdict[section][field] = copy.deepcopy(v)
+          if section == 'defaults_md':
             md_default[field] = copy.deepcopy(outdict[section][field])
+
 
               
 
@@ -416,6 +428,8 @@ class pair_ljg():
             Kappa = 0.5/(asmears1[0]**2.0 + asmears2[0]**2.0)
             outdict[section][ientry]['Kappa']['val'] = Kappa
             vprint('  Using asmear mixing rule, Kappa = {}'.format(Kappa))
+            outdict[section][ientry]['Cut']['val'] = 5.0*(0.5*(asmears1[0]**2.0+asmears2[0]**2.0))**0.5
+            vprint('  with cutoff = 5abar = {}'.format( outdict[section][ientry]['Cut']['val'] ))
           else:
             vprint('  CAUTION: Multiple bead pairs defined, but asmears are not consistent, cannot define unique Kappa for this potential. Using default.'.format())
 
@@ -440,6 +454,8 @@ class pair_ljg():
             sigma_g = (asmears1[0]**2.0 + asmears2[0]**2.0)**0.5
             outdict[section][ientry]['sigma_g']['val'] = sigma_g
             vprint('  Using asmear mixing rule, sigma_g = {}'.format(sigma_g))
+            outdict[section][ientry]['cut']['val'] = 5.0*(0.5*(asmears1[0]**2.0+asmears2[0]**2.0))**0.5
+            vprint('  with cutoff = 5abar = {}'.format( outdict[section][ientry]['Cut']['val'] ))
           else:
             vprint('  CAUTION: Multiple bead pairs defined, but asmears are not consistent, cannot define unique sigma_g for this potential. Using default.'.format())
 
@@ -451,7 +467,7 @@ class pair_ljg():
     -----
     Also copy over default smearing lengths, check that Kappa is fixed.
     '''
-    vprint('\n=== Converting LJGaussian from sim to md ===')
+    vprint('\n=== Converting LJGaussian from Sim to MD ===')
     base_potential.convert(cls,ffdict,'sim','md')
     source = 'params_sim'
     target = 'params_md'
@@ -477,7 +493,7 @@ class pair_ljg():
   @classmethod
   def md2sim(cls,ffdict):
     '''Have to convert u0,sigma_g to B,Kappa'''
-    vprint('\n=== Converting LJGaussian from md to sim===')
+    vprint('\n=== Converting LJGaussian from MD to Sim ===')
     base_potential.convert(cls,ffdict,'md','sim')
     source = 'params_md'
     target = 'params_sim'

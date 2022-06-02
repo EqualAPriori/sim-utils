@@ -1,0 +1,46 @@
+# Example yaml force field definition 
+pair_ljg:
+  defaults_sim: #used only by sim
+    B: 0.0 True
+    Kappa: 1.0 True
+    Dist0: 0.0 True
+    a_smear: #For now, behavior is to default Kappa, but not pre-given Kappas
+      C2: 0.310741
+      SO4: 0.310741
+      Na: 0.310741
+      Cl: 0.310741
+      W: 0.310741
+
+  params_sim: # B*exp(-kappa*(r-Dist0)) + 4 Epsilon ( (Sigma/r)^12 - (Sigma/r)^6 )
+    - Na Na B;0.0;False 
+    - Na Cl B;0.0;False 
+    - Na W  B;0.0;False 
+    - Cl Cl B;0.0;False 
+    - Cl W  B;0.0;False 
+    - [W, W, [B, 0.0, fixed]]
+
+external_sin:
+  defaults_sim:
+    UConst: 0.0 fixed
+    NPeriods: 1.0 fixed
+    PlaneLoc: 0.0
+    PlaneAxis: 2
+
+  params_sim:
+    - Na;Cl UConst;1.0;True
+
+coulomb_smeared: #automatically turns on ewald, then adds the correction potential
+  defaults_sim:
+    Coef: 1.0 True
+    BornA: 1.0 True
+    Cut: 1.0
+    Shift: True
+    ExcludeBondOrd: 0 # only implemented in ewald. currently !=0 values not supported
+    a_smear: #first implementation: only overrides if BornA not defined below. Use same smearing convention as Gaussian above, not Born-A convention. Think about one-lining this?
+      Na: 0.310741
+      Cl: 0.310741
+
+  params_sim: #if BornA = 0, then same as unsmeared Coulomb. Even if no interactions defined, still add ewald.
+    - Na,Cl Na,Cl
+
+  params_md:
